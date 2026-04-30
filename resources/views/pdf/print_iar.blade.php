@@ -100,7 +100,7 @@
                 <tr class="text-center with-border">
                     <td></td>
                     <td>{{ $detail->prDetail->item ?? '' }} - {{ $detail->prDetail->specs ?? '' }}</td>
-                    <td>{{ $detail->prDetail->unit->unit ?? '' }}</td>
+                    <td>{{ $iarData->unit->unit ?? '' }}</td>
                     <td>{{ $detail->quantity ?? 0 }}</td>
                 </tr>
             @endforeach
@@ -114,12 +114,6 @@
             </tr>
         @endif
 
-        {{-- Fill empty rows for layout consistency --}}
-        @for ($i = 0; $i < 5; $i++)
-            <tr class="with-border">
-                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
-            </tr>
-        @endfor
 
         <tr class="with-border font-semibold" style="font-size: 14px">
             <td colspan="2" class="text-center">Inspection</td>
@@ -153,7 +147,7 @@
         @endphp
 
         <tr class="with-border">
-            <td colspan="2" class="text-center" style="height: 7%">
+            <td colspan="2" class="text-center" style="height: 4%">
                 <span class="underline font-bold">{{ strtoupper(optional($leader)->name ?? '__________________') }}</span><br>
                 <small>Team Leader</small>
             </td>
@@ -161,7 +155,7 @@
         </tr>
 
         <tr class="with-border">
-            <td colspan="2" class="text-center" style="height: 7%">
+            <td colspan="2" class="text-center" style="height: 4%">
                 <span class="underline font-bold">{{ strtoupper(optional($members->shift())->name ?? '__________________') }}</span><br>
                 <small>Accounting Representative</small>
             </td>
@@ -172,7 +166,7 @@
         </tr>
 
         <tr class="with-border">
-            <td colspan="2" class="text-center" style="height: 5%">
+            <td colspan="2" class="text-center" style="height: 3%">
                 <span class="underline font-bold">{{ strtoupper(optional($members->shift())->name ?? '__________________') }}</span><br>
                 <small>Supply Representative</small>
             </td>

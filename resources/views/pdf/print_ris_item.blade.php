@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Requisition and Inventory Slip</title>
+    <title>Requisition and Issue Slip</title>
     <style>
         body {
             font-family: "Times New Roman", Times, serif;
@@ -24,7 +24,7 @@
 </head>
 <body>
     <div class="text-center font-bold" style="font-size:16px; margin:30px 0;">
-        Requisition and Inventory Slip
+        Requisition and Issue Slip
     </div>
 
     {{-- Top Info --}}

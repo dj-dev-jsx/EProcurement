@@ -99,7 +99,7 @@ export default function AdminLayout({ header, children }) {
       <aside
         className={`${
           sidebarOpen ? 'block' : 'hidden'
-        } md:block md:w-64 w-full bg-gray-900 text-white shadow-2xl md:sticky md:top-0 h-screen md:h-auto sticky z-50 transition-all duration-300`}
+        } md:block md:w-64 w-full bg-gray-900 text-white md:sticky md:top-0 h-screen sticky z-50`}
       >
         <div className="p-6 flex flex-col h-full">
           {/* Logo */}

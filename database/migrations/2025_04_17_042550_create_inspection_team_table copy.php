@@ -24,9 +24,9 @@ return new class extends Migration
         });
     }
 
-    public function down(): void
-    {
-        Schema::dropIfExists('tbl_inspection_committees');
-        Schema::dropIfExists('tbl_inspection_committee_members');
-    }
+public function down(): void
+{
+    Schema::dropIfExists('tbl_inspection_committee_members');
+    Schema::dropIfExists('tbl_inspection_committees');
+}
 };

@@ -244,7 +244,7 @@ const handleReject = () => {
                   <th className="px-4 py-3 border-r border-gray-200">Specs</th>
                   <th className="px-4 py-3 border-r border-gray-200">Unit</th>
                   <th className="px-4 py-3 border-r border-gray-200 text-center">Qty</th>
-                  <th className="px-4 py-3 border-r border-gray-200 text-right">Unit Price</th>
+                  <th className="px-4 py-3 border-r border-gray-200 text-right">Estimated Unit Price</th>
                   <th className="px-4 py-3 text-right">Total</th>
                 </tr>
               </thead>

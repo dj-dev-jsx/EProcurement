@@ -82,62 +82,6 @@
             <td colspan="6" class="text-center">No items listed.</td>
         </tr>
         @endforelse
-        <tr>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-        </tr>
-        <tr>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-        </tr>
-        <tr>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-        </tr>
-        <tr>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-        </tr>
-        <tr>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-        </tr>
-        <tr>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-        </tr>
-        <tr>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-            <td style="border-left: 1px solid !important; border-right: 1px solid !important;">&nbsp;</td>
-        </tr>
 
         <!-- Grand Total Row -->
         <tr class="font-bold">

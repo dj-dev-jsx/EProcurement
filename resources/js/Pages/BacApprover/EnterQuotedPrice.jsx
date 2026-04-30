@@ -1,10 +1,27 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   ScrollText,
   FilePlus2,
   CheckCircle2,
   Save,
   Trash2,
+  Package,
+  Users,
+  Building2,
+  Calendar,
+  User,
+  ArrowLeft,
+  Plus,
+  Search,
+  X,
+  Tag,
+  MapPin,
+  DollarSign,
+  Check,
+  Clock,
+  AlertCircle,
+  ChevronRight,
+  ClipboardList,
 } from "lucide-react";
 import ApproverLayout from "@/Layouts/ApproverLayout";
 import { Head, router, useForm, usePage } from "@inertiajs/react";
@@ -24,58 +41,27 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function EnterQuotedPrices({ pr, suppliers, rfqs, purchaseRequest, rfq_details }) {
   const { toast } = useToast();
-useEffect(() => {
-  if (rfq_details && rfq_details.length > 0) {
-    // Build a map of { pr_details_id: supplier_id }
-    const initialSelected = {};
-    rfq_details.forEach(rfq => {
-      // Allow multiple suppliers per item
-      if (!initialSelected[rfq.pr_details_id]) {
-        initialSelected[rfq.pr_details_id] = [];
-      }
-      if (!initialSelected[rfq.pr_details_id].includes(rfq.supplier_id)) {
-        initialSelected[rfq.pr_details_id].push(rfq.supplier_id);
-      }
-    });
-    setSelectedSuppliersByItem(initialSelected);
-  }
-}, [rfq_details]);
-const [entirePRPrice, setEntirePRPrice] = useState("");
-const [entirePRSupplier, setEntirePRSupplier] = useState(null);
-
-  const inputRefs = useRef({});
-  // Supplier list state
+  const [selectedSuppliersByItem, setSelectedSuppliersByItem] = useState({});
+  const [entirePRSupplier, setEntirePRSupplier] = useState(null);
   const [supplierList, setSupplierList] = useState(suppliers ?? []);
-  // Selected supplier in modal
   const [selectedSupplierId, setSelectedSupplierId] = useState("");
-  // Pagination and search for supplier modal
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const [searchQuery, setSearchQuery] = useState("");
-  // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogContent, setDialogContent] = useState({ title: "", message: "", type: "success" });
   const [onConfirmAction, setOnConfirmAction] = useState(null);
-  // Submission states
   const [submittingId, setSubmittingId] = useState(null);
   const [quotedPrices, setQuotedPrices] = useState({});
-  // Modal for supplier selection
   const [showModal, setShowModal] = useState(false);
-  // Selected PR detail item for supplier selection
   const [selectedItemId, setSelectedItemId] = useState(null);
-  // Toggle to show all suppliers or recommended only
-  const [showAllSuppliers, setShowAllSuppliers] = useState(false);
-  // Add supplier modal
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
-  const [selectedSuppliersByItem, setSelectedSuppliersByItem] = useState({});
-  // New supplier form data
   const [newSupplier, setNewSupplier] = useState({
     representative_name: "",
     company_name: "",
     address: "",
     tin_num: "",
   });
-  // Estimated prices per item
   const [estimatedPrice, setEstimatedPrice] = useState(() => {
     const initial = {};
     if (pr.details) {
@@ -85,42 +71,54 @@ const [entirePRSupplier, setEntirePRSupplier] = useState(null);
     }
     return initial;
   });
-
-
-
-
-
-  // Form for selections (supplier + item + estimated bid)
   const { data, setData } = useForm({
     pr_id: pr.id,
     user_id: purchaseRequest?.focal_person?.id ?? null,
     supplier_id: '',
     selections: []
   });
+  const [editingQuotes, setEditingQuotes] = useState({});
+  const [warningDialogOpen, setWarningDialogOpen] = useState(false);
+  const [skippedItems, setSkippedItems] = useState([]);
+  const { flash } = usePage().props;
 
-  // Show dialog helper
+  // Calculate progress
+  const totalItems = pr.details?.length || 0;
+  const submittedCount = rfq_details?.length || 0;
+  const progressPercentage = totalItems > 0 ? Math.round((submittedCount / totalItems) * 100) : 0;
+
+  useEffect(() => {
+    if (rfq_details && rfq_details.length > 0) {
+      const initialSelected = {};
+      rfq_details.forEach(rfq => {
+        if (!initialSelected[rfq.pr_details_id]) {
+          initialSelected[rfq.pr_details_id] = [];
+        }
+        if (!initialSelected[rfq.pr_details_id].includes(rfq.supplier_id)) {
+          initialSelected[rfq.pr_details_id].push(rfq.supplier_id);
+        }
+      });
+      setSelectedSuppliersByItem(initialSelected);
+    }
+  }, [rfq_details]);
+
   const showDialog = ({ title, message, type, onConfirm = null }) => {
     setDialogContent({ title, message, type });
     setOnConfirmAction(() => onConfirm);
     setDialogOpen(true);
   };
 
-  // Confirm submit single quote
+  const confirmSubmit = (e, detailId, supplierId, currentQuotedPrice) => {
+    e.preventDefault();
+    const currentQuotedPriceValue = currentQuotedPrice === "" ? null : currentQuotedPrice;
+    showDialog({
+      title: "Confirm Submission",
+      message: "Are you sure you want to submit this quoted price?",
+      type: "confirm",
+      onConfirm: () => handleSubmit(detailId, supplierId, currentQuotedPriceValue),
+    });
+  };
 
-const confirmSubmit = (e, detailId, supplierId, currentQuotedPrice) => {
-  e.preventDefault();
-
-  const currentQuotedPriceValue = currentQuotedPrice === "" ? null : currentQuotedPrice;
-
-  showDialog({
-    title: "Confirm Submission",
-    message: "Are you sure you want to submit this quoted price?",
-    type: "confirm",
-    onConfirm: () => handleSubmit(detailId, supplierId, currentQuotedPriceValue),
-  });
-};
-
-  // Get quoted price from rfq_details
   const getQuotedPrice = (detailId, supplierId) => {
     const quoted = rfq_details.find(
       (q) => q.pr_details_id === detailId && q.supplier_id === supplierId
@@ -128,69 +126,45 @@ const confirmSubmit = (e, detailId, supplierId, currentQuotedPrice) => {
     return quoted?.quoted_price ?? null;
   };
 
-  // Handle price input change
-const handlePriceChange = (value, detailId, supplierId) => {
-  const unitPrice = pr.details.find(d => d.id === detailId)?.unit_price || 0;
-  let numericValue = parseFloat(value);
+  const handleSubmit = (detailId, supplierId, quoted_price_to_submit, editingKey = null) => {
+    const final_quoted_price = quoted_price_to_submit === "" ? null : quoted_price_to_submit;
+    const payload = {
+      pr_id: pr.id,
+      pr_details_id: detailId,
+      supplier_id: supplierId,
+      quoted_price: final_quoted_price,
+    };
+    const submittingKey = editingKey || `${detailId}-${supplierId}`;
+    setSubmittingId(submittingKey);
 
-  if (numericValue > unitPrice) {
-    numericValue = unitPrice; // clamp to maximum allowed
-  }
-
-  const key = `${detailId}-${supplierId}`;
-  setQuotedPrices(prev => ({ ...prev, [key]: numericValue }));
-};
-
-
-
-  // Submit single quoted price
-const handleSubmit = (detailId, supplierId, quoted_price_to_submit, editingKey = null) => {
-  const final_quoted_price = quoted_price_to_submit === "" ? null : quoted_price_to_submit;
-
-  const payload = {
-    pr_id: pr.id,
-    pr_details_id: detailId,
-    supplier_id: supplierId,
-    quoted_price: final_quoted_price,
+    router.post(route("bac_user.submit_quoted"), payload, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setSubmittingId(null);
+        if (editingKey) {
+          setEditingQuotes((prev) => {
+            const next = { ...prev };
+            delete next[editingKey];
+            return next;
+          });
+        }
+        showDialog({
+          title: "Submitted!",
+          message: "Quoted price submitted successfully.",
+          type: "success",
+        });
+      },
+      onError: (errors) => {
+        setSubmittingId(null);
+        showDialog({
+          title: "Oops!",
+          message: errors?.quoted_price || "Something went wrong while submitting.",
+          type: "error",
+        });
+      },
+    });
   };
 
-  const submittingKey = editingKey || `${detailId}-${supplierId}`;
-  setSubmittingId(submittingKey);
-
-  router.post(route("bac_user.submit_quoted"), payload, {
-    preserveScroll: true,
-    onSuccess: () => {
-      setSubmittingId(null);
-
-      // ✅ exit edit mode if we were editing
-      if (editingKey) {
-        setEditingQuotes((prev) => {
-          const next = { ...prev };
-          delete next[editingKey];
-          return next;
-        });
-      }
-
-      showDialog({
-        title: "Submitted!",
-        message: "Quoted price submitted successfully.",
-        type: "success",
-      });
-    },
-    onError: (errors) => {
-      setSubmittingId(null);
-      showDialog({
-        title: "Oops!",
-        message: errors?.quoted_price || "Something went wrong while submitting.",
-        type: "error",
-      });
-    },
-  });
-};
-
-
-
-  // Confirm bulk submit
   const confirmSubmitAll = () => {
     showDialog({
       title: "Confirm Bulk Submission",
@@ -200,81 +174,67 @@ const handleSubmit = (detailId, supplierId, quoted_price_to_submit, editingKey =
     });
   };
 
-  // Submit all quoted prices
-const handleSubmitAll = () => {
-  if (!entirePRSupplier) return;
+  const handleSubmitAll = () => {
+    if (!entirePRSupplier) return;
+    const entries = pr.details
+      .map((detail) => {
+        const uniqueId = `${detail.id}-${entirePRSupplier}`;
+        const quotedPrice = quotedPrices[uniqueId];
+        const final_quoted_price = quotedPrice === "" ? null : quotedPrice;
+        if (quotedPrice !== undefined) {
+          return {
+            pr_id: pr.id,
+            pr_details_id: detail.id,
+            supplier_id: entirePRSupplier,
+            quoted_price: final_quoted_price,
+          };
+        }
+        return null;
+      })
+      .filter((entry) => entry !== null);
 
-  const entries = pr.details
-    .map((detail) => {
-      const uniqueId = `${detail.id}-${entirePRSupplier}`;
-      const quotedPrice = quotedPrices[uniqueId];
-
-      const final_quoted_price =
-        quotedPrice === "" ? null : quotedPrice;
-
-      if (quotedPrice !== undefined) {
-        return {
-          pr_id: pr.id,
-          pr_details_id: detail.id,
-          supplier_id: entirePRSupplier,
-          quoted_price: final_quoted_price,
-        };
-      }
-      return null;
-    })
-    .filter((entry) => entry !== null);
-
-  if (entries.length === 0) {
-    showDialog({
-      title: "No Prices to Submit",
-      message: "Please enter at least one quoted price before submitting all.",
-      type: "warning",
-    });
-    return;
-  }
-
-  setSubmittingId("all");
-
-  router.post(
-    route("bac_user.submit_bulk_quoted"),
-    { quotes: entries },
-    {
-      preserveScroll: true,
-      onSuccess: () => {
-        console.log("Bulk submitted successfully");
-
-        // clear submitted prices from quotedPrices (like handleSubmit does)
-        setQuotedPrices((prev) => {
-          const updated = { ...prev };
-          entries.forEach((entry) => {
-            delete updated[`${entry.pr_details_id}-${entry.supplier_id}`];
-          });
-          return updated;
-        });
-
-        setSubmittingId(null);
-        showDialog({
-          title: "All Quoted Prices Submitted!",
-          message: "All prices for this supplier have been submitted successfully.",
-          type: "success",
-        });
-      },
-      onError: (errors) => {
-        console.error("Bulk submission failed", errors);
-        setSubmittingId(null);
-        showDialog({
-          title: "Oops!",
-          message: errors?.quoted_price || "Something went wrong while submitting all prices.",
-          type: "error",
-        });
-      },
+    if (entries.length === 0) {
+      showDialog({
+        title: "No Prices to Submit",
+        message: "Please enter at least one quoted price before submitting all.",
+        type: "warning",
+      });
+      return;
     }
-  );
-};
 
+    setSubmittingId("all");
+    router.post(
+      route("bac_user.submit_bulk_quoted"),
+      { quotes: entries },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setQuotedPrices((prev) => {
+            const updated = { ...prev };
+            entries.forEach((entry) => {
+              delete updated[`${entry.pr_details_id}-${entry.supplier_id}`];
+            });
+            return updated;
+          });
+          setSubmittingId(null);
+          showDialog({
+            title: "All Quoted Prices Submitted!",
+            message: "All prices for this supplier have been submitted successfully.",
+            type: "success",
+          });
+        },
+        onError: (errors) => {
+          setSubmittingId(null);
+          showDialog({
+            title: "Oops!",
+            message: errors?.quoted_price || "Something went wrong while submitting all prices.",
+            type: "error",
+          });
+        },
+      }
+    );
+  };
 
-
-  // Add or update selection (item + supplier + estimated bid)
   const addSelection = (itemId, supplierId, estimatedBid) => {
     setData(prevData => {
       const filtered = (prevData.selections || []).filter(
@@ -287,12 +247,9 @@ const handleSubmitAll = () => {
     });
   };
 
-  // Open supplier modal for a specific item
   const openModalForItem = (itemId) => {
     setSelectedItemId(itemId);
-    setShowAllSuppliers(false);
     setShowModal(true);
-
     const selectedItem = pr.details.find(d => d.id === itemId);
     if (selectedItem) {
       const unitPrice = selectedItem.unit_price || "";
@@ -300,20 +257,14 @@ const handleSubmitAll = () => {
       setData(prev => ({ ...prev, estimated_bid: unitPrice }));
     }
   };
-  const { flash } = usePage().props;
 
-
-  // Handle adding new supplier
   const handleSubmitSupplier = async (e) => {
     e.preventDefault();
-
     try {
       const response = await axios.post(route("bac_user.store_supplier"), newSupplier);
       const createdSupplier = response.data.supplier;
-
       setSupplierList(prev => [...prev, createdSupplier]);
       setSelectedSupplierId(String(createdSupplier.id));
-
       const newSupplierId = createdSupplier.id;
       const priceValue = selectedItemId === null ? "" : (estimatedPrice[selectedItemId] || "");
       const initialBid = priceValue.toString().trim() || (pr.details?.find(d => d.id === selectedItemId)?.unit_price || "");
@@ -336,10 +287,9 @@ const handleSubmitAll = () => {
 
       setShowAddSupplierModal(false);
       setShowModal(false);
-
     } catch (error) {
       if (error.response) {
-      console.error("Server error:", error.response.data);
+        console.error("Server error:", error.response.data);
       } else {
         console.error("Error adding supplier:", error.message);
       }
@@ -347,621 +297,675 @@ const handleSubmitAll = () => {
     }
   };
 
-  // Filtering suppliers for modal
-const selectedItem = selectedItemId && pr.details?.length
-  ? pr.details.find(d => d.id === selectedItemId)
-  : null;
+  const selectedItem = selectedItemId && pr.details?.length
+    ? pr.details.find(d => d.id === selectedItemId)
+    : null;
 
+  const filteredSuppliers = supplierList
+    .filter(supplier => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        supplier.representative_name?.toLowerCase().includes(q) ||
+        supplier.company_name?.toLowerCase().includes(q) ||
+        supplier.address?.toLowerCase().includes(q)
+      );
+    })
+    .filter(supplier => {
+      return !rfq_details.some(
+        (q) => q.pr_details_id === selectedItemId && q.supplier_id === supplier.id
+      );
+    });
 
-
-
-const filteredSuppliers = supplierList
-  .filter(supplier => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      supplier.representative_name?.toLowerCase().includes(q) ||
-      supplier.company_name?.toLowerCase().includes(q) ||
-      supplier.address?.toLowerCase().includes(q)
-    );
-  })
-  .filter(supplier => {
-    return !rfq_details.some(
-      (q) => q.pr_details_id === selectedItemId && q.supplier_id === supplier.id
-    );
-  });
-
-useEffect(() => {
-  setCurrentPage(1);
-}, [searchQuery]);
-  const closeSupplierModal = () => {
-    setShowModal(false);
-    setEntirePRSupplier(null); // reset to avoid stale global supplier
-  };
-
-
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
   const indexOfLast = currentPage * itemsPerPage;
   const indexOfFirst = indexOfLast - itemsPerPage;
   const currentSuppliers = filteredSuppliers.slice(indexOfFirst, indexOfLast);
-  const [editingQuotes, setEditingQuotes] = useState({});
 
-const handleDeleteQuote = (detailId, supplierId, uniqueId) => {
-  setSubmittingId(uniqueId);
-
-  router.delete(route("bac_user.delete_quoted"), {
-    data: {
-      pr_id: pr.id,
-      pr_details_id: detailId,
-      supplier_id: supplierId,
-    },
-    preserveScroll: true,
-    onSuccess: () => {
-      setSubmittingId(null);
-
-      // Reset local state
-      setQuotedPrices((prev) => {
-        const next = { ...prev };
-        delete next[uniqueId];
-        return next;
-      });
-      setEditingQuotes((prev) => {
-        const next = { ...prev };
-        delete next[uniqueId];
-        return next;
-      });
-      setSelectedSuppliersByItem((prev) => {
-        const updated = { ...prev };
-        if (Array.isArray(updated[detailId])) {
-          updated[detailId] = updated[detailId].filter((id) => id !== supplierId);
-          if (updated[detailId].length === 0) {
-            delete updated[detailId]; // clean up empty entries
+  const handleDeleteQuote = (detailId, supplierId, uniqueId) => {
+    setSubmittingId(uniqueId);
+    router.delete(route("bac_user.delete_quoted"), {
+      data: {
+        pr_id: pr.id,
+        pr_details_id: detailId,
+        supplier_id: supplierId,
+      },
+      preserveScroll: true,
+      onSuccess: () => {
+        setSubmittingId(null);
+        setQuotedPrices((prev) => {
+          const next = { ...prev };
+          delete next[uniqueId];
+          return next;
+        });
+        setEditingQuotes((prev) => {
+          const next = { ...prev };
+          delete next[uniqueId];
+          return next;
+        });
+        setSelectedSuppliersByItem((prev) => {
+          const updated = { ...prev };
+          if (Array.isArray(updated[detailId])) {
+            updated[detailId] = updated[detailId].filter((id) => id !== supplierId);
+            if (updated[detailId].length === 0) {
+              delete updated[detailId];
+            }
           }
+          return updated;
+        });
+        toast({
+          title: "Deleted",
+          description: "Quoted price removed successfully.",
+          variant: "default",
+          setTimeout: 3000
+        });
+        showDialog({
+          open: true,
+          title: "Deleted!",
+          description: "The quoted price was removed successfully.",
+        });
+      },
+      onFinish: () => {
+        setSubmittingId(null);
+        if (flash?.message) {
+          toast({
+            title: flash.status === "success" ? "Deleted" : "Error",
+            description: flash.message,
+            variant: flash.status === "success" ? "default" : "destructive",
+            setTimeout: 3000
+          });
         }
-        return updated;
-      });
-
-      // ✅ Show Toast
-      toast({
-        title: "Deleted",
-        description: "Quoted price removed successfully.",
-        variant: "default",
-        setTimeout: 3000
-      });
-
-      // ✅ Show Dialog (shadcn)
-      showDialog({
-        open: true,
-        title: "Deleted!",
-        description: "The quoted price was removed successfully.",
-      });
-    },
-    onFinish: (visit) => {
-      setSubmittingId(null);
-
-      if (flash?.message) {
-      toast({
-        title: flash.status === "success" ? "Deleted" : "Error",
-        description: flash.message,
-        variant: flash.status === "success" ? "default" : "destructive",
-        setTimeout: 3000
-      });
-
-      showDialog({
-        open: true,
-        title: flash.status === "success" ? "Deleted!" : "Error!",
-        description: flash.message,
-      });
-    }
-    },
-    onError: () => {
-      setSubmittingId(null);
-
-      toast({
-        title: "Error",
-        description: "Could not delete quoted price.",
-        variant: "destructive",
-        setTimeout: 3000
-      });
-
-      showDialog({
-        open: true,
-        title: "Error!",
-        description: "Something went wrong while deleting.",
-      });
-    },
-  });
-};
-  const [warningDialogOpen, setWarningDialogOpen] = useState(false);
-const [skippedItems, setSkippedItems] = useState([]);
-
+      },
+      onError: () => {
+        setSubmittingId(null);
+        toast({
+          title: "Error",
+          description: "Could not delete quoted price.",
+          variant: "destructive",
+          setTimeout: 3000
+        });
+      },
+    });
+  };
 
   return (
     <ApproverLayout>
       <Head title="Enter Quoted Prices" />
-      <div className="mx-auto px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <ScrollText className="w-8 h-8 text-indigo-700" />
-            Enter Quoted Prices for PR: {pr.pr_number}
-          </h1>
-        </div>
-        <div className="mb-4">
-          <a
-          type="button"
-            href={route("bac_user.for_quotations")}
-            className="inline-flex items-center px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-sm shadow-sm"
-          >
-            ← Back
-          </a>
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
-              <FilePlus2 className="w-5 h-5 text-indigo-600" />
-              Purchase Request Info
-            </h2>
-            <div className="space-y-2 text-sm text-gray-700">
-              <div><strong>PR Number:</strong> {pr.pr_number}</div>
-              <div><strong>Purpose:</strong> {pr.purpose}</div>
-              <div><strong>Requested By:</strong> {pr.requester_name}</div>
-              <div><strong>Division:</strong> {pr.division}</div>
-              <div><strong>Created:</strong> {new Date(pr.created_at).toLocaleDateString()}</div>
-              <div><strong>Focal Person:</strong> {purchaseRequest?.focal_person?.firstname}</div>
-            </div>
-          </div>
-
-          <div className="xl:col-span-2 space-y-10">
-            {pr.details.map(detail => (
-              <div key={detail.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow">
-                <div className="mb-4 border-b pb-3">
-                  <h3 className="text-xl font-semibold text-gray-700">
-                    {detail.item}
-                    <span className="text-sm text-gray-500 ml-2">({detail.specs})</span>
-                  </h3>
-                  
-                  <div className="text-sm text-gray-600 mt-2 grid grid-cols-3 gap-4">
-                    <div><strong>Unit:</strong> {detail.unit}</div>
-                    <div><strong>Quantity:</strong> {detail.quantity}</div>
-                    <div><strong>Est. Price per Unit:</strong> ₱{Number(detail.unit_price || 0).toLocaleString()}</div>
-                  </div>
-                </div>
-                <div className="mt-4 flex justify-end gap-2">
-                  <button
-                    onClick={() => openModalForItem(detail.id)}
-                    className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm shadow-sm"
-                  >
-                    Choose Supplier
-                  </button>
-                  <button
-                    onClick={() => setShowAddSupplierModal(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-sm shadow-sm"
-                  >
-                    ➕ Add New Supplier
-                  </button>
-                </div>
-
-
-                <div className="space-y-6 mt-6">
-                  {Array.isArray(selectedSuppliersByItem[detail.id]) &&
-                    selectedSuppliersByItem[detail.id].map((supplierId) => {
-                      const supplier = supplierList.find((s) => s.id === supplierId);
-                      if (!supplier) return null;
-
-                      const uniqueId = `${detail.id}-${supplierId}`;
-                      const isSubmitting = submittingId === uniqueId;
-                      const quoted = getQuotedPrice(detail.id, supplierId);
-                      const alreadySubmitted = quoted !== null;
-                      const unitPrice = detail.unit_price || 0; // ✅ max allowed price
-
-                      // Updated handle input change
-                      const handleInputChange = (e) => {
-                        let value = parseFloat(e.target.value);
-                        if (isNaN(value)) value = "";
-
-
-                        setQuotedPrices((prev) => ({ ...prev, [uniqueId]: value }));
-                      };
-
-
-                      return (
-                        <form
-                          key={uniqueId}
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            const latestValue = quotedPrices[uniqueId] ?? "";
-                            const isEditing = !!editingQuotes[uniqueId];
-
-                            if (alreadySubmitted && isEditing) {
-                              handleSubmit(detail.id, supplierId, latestValue, uniqueId);
-                            } else {
-                              confirmSubmit(e, detail.id, supplierId, latestValue);
-                            }
-                          }}
-                          className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center mt-4"
-                        >
-                          <div className="md:col-span-4">
-                            <p className="font-medium text-gray-800">{supplier.representative_name}</p>
-                            <p className="text-xs text-gray-500">{supplier.company_name}</p>
-                          </div>
-                          <div className="md:col-span-5 relative">
-                            <input
-                              type="number"
-                              step="0.01"
-                              placeholder="₱ Quoted Price"
-                              disabled={alreadySubmitted && !editingQuotes[uniqueId]}
-                              value={
-                                alreadySubmitted && !editingQuotes[uniqueId]
-                                  ? parseFloat(quoted).toFixed(2)
-                                  : quotedPrices[uniqueId] || ""
-                              }
-                              onWheel={(e) => e.currentTarget.blur()}
-                              onChange={handleInputChange}
-                              className={`w-full border rounded-md px-4 py-2 text-sm shadow-sm ${
-                                alreadySubmitted && !editingQuotes[uniqueId]
-                                  ? "bg-gray-100 border-gray-300 text-gray-500"
-                                  : "border-gray-300 focus:ring-2 focus:ring-indigo-500"
-                              }`}
-                            />
-
-                            {alreadySubmitted && !editingQuotes[uniqueId] && (
-                              <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs font-medium text-green-600">
-                                Already submitted
-                              </span>
-                            )}
-                          </div>
-                          <div className="md:col-span-3 flex gap-2">
-                            {alreadySubmitted && !editingQuotes[uniqueId] ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingQuotes((prev) => ({ ...prev, [uniqueId]: true }));
-                                    setQuotedPrices((prev) => ({ ...prev, [uniqueId]: quoted })); // preload
-                                  }}
-                                  className="w-14 flex justify-center items-center gap-2 py-2 px-4 font-medium text-sm rounded-md bg-yellow-500 hover:bg-yellow-600 text-white"
-                                >
-                                  <PencilSquareIcon className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={isSubmitting}
-                                  onClick={() => {
-                                    showDialog({
-                                      title: "Confirm Delete",
-                                      message: "Are you sure you want to delete this quoted price?",
-                                      type: "confirm",
-                                      onConfirm: () => handleDeleteQuote(detail.id, supplierId, uniqueId),
-                                    });
-                                  }}
-                                  className="w-14 flex justify-center items-center gap-2 py-2 px-4 font-medium text-sm rounded-md bg-red-600 hover:bg-red-700 text-white"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </>
-                            ) : alreadySubmitted ? (
-                              <button
-                                type="button"
-                                disabled={isSubmitting}
-                                onClick={() => handleSubmit(detail.id, supplierId, quotedPrices[uniqueId] ?? "", uniqueId)}
-                                className={`w-14 flex justify-center items-center gap-2 py-2 px-4 font-medium text-sm rounded-md ${
-                                  isSubmitting ? "bg-gray-400 cursor-wait" : "bg-green-600 hover:bg-green-700 text-white"
-                                }`}
-                              >
-                                <Save className="w-4 h-4" />
-                              </button>
-                            ) : (
-                              <button
-                                type="submit"
-                                disabled={isSubmitting}
-                                className={`w-14 flex justify-center items-center gap-2 py-2 px-4 font-medium text-sm rounded-md ${
-                                  isSubmitting ? "bg-gray-400 cursor-wait" : "bg-green-600 hover:bg-green-700 text-white"
-                                }`}
-                              >
-                                <CheckCircle2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </form>
-                      );
-                    })}
-
+      <div className="min-h-screen bg-slate-50">
+        {/* Header */}
+        <div className="bg-white border-b border-slate-200 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <a
+                  href={route("bac_user.for_quotations")}
+                  className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors text-sm font-medium"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Back</span>
+                </a>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5 text-indigo-600" />
+                    Enter Quoted Prices
+                  </h1>
+                  <p className="text-sm text-slate-500">PR: {pr.pr_number}</p>
                 </div>
               </div>
-            ))}
-              {entirePRSupplier && (
-                <div className="mt-6 text-right">
-                  <button
-                    onClick={confirmSubmitAll}
-                    disabled={submittingId === "all"}
-                    className={`inline-flex items-center gap-2 px-6 py-2 text-white text-sm font-semibold rounded-md shadow-sm transition ${
-                      submittingId === "all"
-                        ? "bg-gray-400 cursor-wait"
-                        : "bg-green-600 hover:bg-green-700"
-                    }`}
-                  >
-                    {submittingId === "all" ? "Submitting All..." : "Submit Entire PR Quotes"}
-                  </button>
-                </div>
-              )}
+              <button
+                onClick={() => setShowAddSupplierModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add Supplier</span>
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="bg-white border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-slate-600">Progress</span>
+              <span className="text-sm font-bold text-indigo-600">{progressPercentage}%</span>
+            </div>
+            <div className="w-full bg-slate-200 rounded-full h-2.5">
+              <div 
+                className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" 
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              {submittedCount} of {totalItems} items have quoted prices
+            </p>
+          </div>
+        </div>
+
+        {/* PR Info Cards - Horizontal */}
+        <div className="bg-white border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="bg-slate-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Tag className="w-4 h-4 text-indigo-500" />
+                  <span className="text-xs text-slate-500">PR Number</span>
+                </div>
+                <p className="text-sm font-semibold text-slate-900 truncate">{pr.pr_number}</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Building2 className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs text-slate-500">Division</span>
+                </div>
+                <p className="text-sm font-semibold text-slate-900 truncate">{pr.division}</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <User className="w-4 h-4 text-green-500" />
+                  <span className="text-xs text-slate-500">Requested By</span>
+                </div>
+                <p className="text-sm font-semibold text-slate-900 truncate">{pr.requester_name}</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Users className="w-4 h-4 text-purple-500" />
+                  <span className="text-xs text-slate-500">Focal Person</span>
+                </div>
+                <p className="text-sm font-semibold text-slate-900 truncate">{purchaseRequest?.focal_person?.firstname}</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="w-4 h-4 text-orange-500" />
+                  <span className="text-xs text-slate-500">Created</span>
+                </div>
+                <p className="text-sm font-semibold text-slate-900">{new Date(pr.created_at).toLocaleDateString()}</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Package className="w-4 h-4 text-rose-500" />
+                  <span className="text-xs text-slate-500">Items</span>
+                </div>
+                <p className="text-sm font-semibold text-slate-900">{pr.details?.length || 0}</p>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <p className="text-xs text-slate-500 mb-1">Purpose</p>
+              <p className="text-sm text-slate-700">{pr.purpose}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Items Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {pr.details.map(detail => {
+              const itemSuppliers = selectedSuppliersByItem[detail.id] || [];
+              const hasQuotes = itemSuppliers.length > 0;
+              const hasSubmittedQuotes = itemSuppliers.some(sid => getQuotedPrice(detail.id, sid) !== null);
+              
+              return (
+                <div 
+                  key={detail.id} 
+                  className={`bg-white rounded-xl border-2 transition-all duration-200 ${
+                    hasSubmittedQuotes 
+                      ? 'border-green-200 shadow-sm' 
+                      : hasQuotes 
+                        ? 'border-amber-200 shadow-sm'
+                        : 'border-slate-200'
+                  }`}
+                >
+                  {/* Card Header */}
+                  <div className={`px-4 py-3 rounded-t-lg flex items-center justify-between ${
+                    hasSubmittedQuotes 
+                      ? 'bg-green-50' 
+                      : hasQuotes 
+                        ? 'bg-amber-50'
+                        : 'bg-slate-50'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <Package className={`w-5 h-5 ${hasSubmittedQuotes ? 'text-green-600' : hasQuotes ? 'text-amber-600' : 'text-slate-500'}`} />
+                      <span className="text-xs font-medium text-slate-500">Item</span>
+                    </div>
+                    {hasSubmittedQuotes && (
+                      <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
+                        <Check className="w-3 h-3" /> Complete
+                      </span>
+                    )}
+                    {hasQuotes && !hasSubmittedQuotes && (
+                      <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+                        <Clock className="w-3 h-3" /> Pending
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-4">
+                    <h3 className="font-semibold text-slate-900 text-sm mb-2 line-clamp-2">{detail.item}</h3>
+                    
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">{detail.specs}</span>
+                      <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">{detail.unit}</span>
+                      <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Qty: {detail.quantity}</span>
+                    </div>
+
+                    <div className="bg-indigo-50 rounded-lg p-3 mb-4">
+                      <p className="text-xs text-indigo-600 mb-1">Estimated Price</p>
+                      <p className="text-lg font-bold text-indigo-700">₱{Number(detail.unit_price || 0).toLocaleString()}</p>
+                    </div>
+
+                    {/* Suppliers List */}
+                    <div className="space-y-2 mb-4">
+                      <p className="text-xs font-medium text-slate-500">Suppliers ({itemSuppliers.length})</p>
+                      {itemSuppliers.length > 0 ? (
+                        itemSuppliers.map((supplierId) => {
+                          const supplier = supplierList.find((s) => s.id === supplierId);
+                          if (!supplier) return null;
+                          const uniqueId = `${detail.id}-${supplierId}`;
+                          const isSubmitting = submittingId === uniqueId;
+                          const quoted = getQuotedPrice(detail.id, supplierId);
+                          const alreadySubmitted = quoted !== null;
+
+                          const handleInputChange = (e) => {
+                            let value = parseFloat(e.target.value);
+                            if (isNaN(value)) value = "";
+                            setQuotedPrices((prev) => ({ ...prev, [uniqueId]: value }));
+                          };
+
+                          return (
+                            <div key={uniqueId} className="bg-slate-50 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-slate-800 truncate">{supplier.representative_name}</p>
+                                  <p className="text-xs text-slate-500 truncate">{supplier.company_name}</p>
+                                </div>
+                                {alreadySubmitted && !editingQuotes[uniqueId] && (
+                                  <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full shrink-0">
+                                    Submitted
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 relative">
+                                  <p className="absolute left-2 top-4 -translate-y-1/2 w-5 h-5 text-slate-400">₱</p>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="Enter price"
+                                    disabled={alreadySubmitted && !editingQuotes[uniqueId]}
+                                    value={
+                                      alreadySubmitted && !editingQuotes[uniqueId]
+                                        ? parseFloat(quoted).toFixed(2)
+                                        : quotedPrices[uniqueId] || ""
+                                    }
+                                    onWheel={(e) => e.currentTarget.blur()}
+                                    onChange={handleInputChange}
+                                    className={`w-full pl-7 pr-3 py-2 text-sm rounded-lg border ${
+                                      alreadySubmitted && !editingQuotes[uniqueId]
+                                        ? 'bg-white border-slate-200 text-slate-500'
+                                        : 'border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
+                                    }`}
+                                  />
+                                </div>
+                                <div className="flex gap-1">
+                                  {alreadySubmitted && !editingQuotes[uniqueId] ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingQuotes((prev) => ({ ...prev, [uniqueId]: true }));
+                                          setQuotedPrices((prev) => ({ ...prev, [uniqueId]: quoted }));
+                                        }}
+                                        className="p-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg"
+                                        title="Edit"
+                                      >
+                                        <PencilSquareIcon className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={isSubmitting}
+                                        onClick={() => {
+                                          showDialog({
+                                            title: "Confirm Delete",
+                                            message: "Are you sure you want to delete this quoted price?",
+                                            type: "confirm",
+                                            onConfirm: () => handleDeleteQuote(detail.id, supplierId, uniqueId),
+                                          });
+                                        }}
+                                        className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
+                                        title="Delete"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  ) : alreadySubmitted ? (
+                                    <button
+                                      type="button"
+                                      disabled={isSubmitting}
+                                      onClick={() => handleSubmit(detail.id, supplierId, quotedPrices[uniqueId] ?? "", uniqueId)}
+                                      className={`p-2 rounded-lg ${
+                                        isSubmitting ? "bg-slate-400" : "bg-green-600 hover:bg-green-700"
+                                      } text-white`}
+                                      title="Save"
+                                    >
+                                      <Save className="w-4 h-4" />
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="submit"
+                                      disabled={isSubmitting}
+                                      onClick={(e) => confirmSubmit(e, detail.id, supplierId, quotedPrices[uniqueId] ?? "")}
+                                      className={`p-2 rounded-lg ${
+                                        isSubmitting ? "bg-slate-400" : "bg-indigo-600 hover:bg-indigo-700"
+                                      } text-white`}
+                                      title="Submit"
+                                    >
+                                      <CheckCircle2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-xs text-slate-400 text-center py-2">No suppliers added yet</p>
+                      )}
+                    </div>
+
+                    {/* Action Button */}
+                    <button
+                      onClick={() => openModalForItem(detail.id)}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Users className="w-4 h-4" />
+                      {itemSuppliers.length > 0 ? 'Manage Suppliers' : 'Add Supplier'}
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Bulk Submit */}
+          {entirePRSupplier && (
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={confirmSubmitAll}
+                disabled={submittingId === "all"}
+                className={`flex items-center gap-2 px-6 py-3 text-white rounded-lg font-medium transition-all ${
+                  submittingId === "all"
+                    ? "bg-slate-400 cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-700 shadow-lg"
+                }`}
+              >
+                {submittingId === "all" ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" />
+                    Submit All Quotes
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Supplier Selection Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="relative w-full max-w-7xl p-6 bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200">
-            {/* Close button */}
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 transition-colors"
-              aria-label="Close modal"
-            >
-              ✕
-            </button>
-
-            {/* Title */}
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
-              Select a Supplier
-            </h2>
-
-
-            {/* Search + toggle */}
-            <div className="flex justify-between items-center mb-5 gap-3">
-              <input
-                type="text"
-                placeholder="🔍 Filter suppliers..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full max-w-xs border border-gray-300 rounded-lg px-4 py-2 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
-              />
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-indigo-600 px-6 py-4 shrink-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Select Supplier
+                  </h2>
+                  {selectedItem && (
+                    <p className="text-indigo-200 text-sm mt-1">Item: {selectedItem.item}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto max-h-96 overflow-y-auto rounded-lg border border-gray-200">
-              <table className="min-w-full text-sm text-gray-700">
-                <thead className="bg-gray-100 text-gray-600 uppercase text-xs tracking-wide">
-                  <tr>
-                    <th className="py-3 px-4 text-left">ID</th>
-                    <th className="py-3 px-4 text-left">Name</th>
-                    <th className="py-3 px-4 text-left">Company</th>
-                    <th className="py-3 px-4 text-left">Address</th>
-                    <th className="py-3 px-4 text-left">TIN</th>
-                    <th className="py-3 px-4 text-left">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentSuppliers.length > 0 ? (
-                    currentSuppliers.map((supplier) => (
-                      <tr
-                        key={supplier.id}
-                        className="hover:bg-indigo-50 transition-colors"
-                      >
-                        <td className="py-3 px-4">{supplier.id}</td>
-                        <td className="py-3 px-4">{supplier.representative_name}</td>
-                        <td className="py-3 px-4">{supplier.company_name}</td>
+            {/* Modal Body */}
+            <div className="p-4 overflow-y-auto flex-1">
+              {/* Search */}
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, company, or address..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
 
-
-                        <td className="py-3 px-4">{supplier.address}</td>
-                        <td className="py-3 px-4">{supplier.tin_num}</td>
-                        <td className="py-3 px-4 space-x-2 text-nowrap">
-                          <button
-                            disabled={rfq_details.some(
-                              (q) =>
-                                q.pr_details_id === selectedItemId &&
-                                q.supplier_id === supplier.id
-                            )}
-                            onClick={() => {
-                              const priceValue =
-                                selectedItemId === null
-                                  ? ""
-                                  : estimatedPrice[selectedItemId] || "";
-                              const finalBid =
-                                priceValue.toString().trim() ||
-                                (pr.details?.find((d) => d.id === selectedItemId)?.unit_price ||
-                                  "");
-
-                              addSelection(selectedItemId, supplier.id, finalBid);
-                              setEstimatedPrice((prev) => ({
-                                ...prev,
-                                [selectedItemId]: finalBid,
-                              }));
-                              setSelectedSuppliersByItem((prev) => {
-                                const current = prev[selectedItemId] || [];
-                                if (current.includes(supplier.id)) return prev;
-                                return {
-                                  ...prev,
-                                  [selectedItemId]: [...current, supplier.id],
-                                };
-                              });
-                              setSelectedSupplierId(String(supplier.id));
-                              setShowModal(false);
-                            }}
-                            className="text-sm bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-1 rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Select
-                          </button>
-
-                        <button
-                          onClick={() => {
-                            const updatedSelectedSuppliers = { ...selectedSuppliersByItem };
-                            const updatedPrices = { ...estimatedPrice };
-                            const skipped = [];
-
-                            pr.details.forEach((detail) => {
-                              const alreadyQuoted = rfq_details.some(
-                                (q) => q.pr_details_id === detail.id && q.supplier_id === supplier.id
-                              );
-
-                              if (alreadyQuoted) {
-                                skipped.push(detail.item_description || `Item #${detail.id}`);
-                              } else {
-                                const price = detail.unit_price || "";
-                                updatedPrices[detail.id] = price;
-
-                                addSelection(detail.id, supplier.id, price);
-
-                                const current = updatedSelectedSuppliers[detail.id] || [];
-                                if (!current.includes(supplier.id)) {
-                                  updatedSelectedSuppliers[detail.id] = [...current, supplier.id];
-                                }
-                              }
-                            });
-
-                            setEstimatedPrice(updatedPrices);
-                            setSelectedSuppliersByItem(updatedSelectedSuppliers);
-                            setSelectedSupplierId(String(supplier.id));
-                            setEntirePRSupplier(supplier.id); 
-                            setShowModal(false);
-
-                            if (skipped.length > 0) {
-                              setSkippedItems(skipped);
-                              setWarningDialogOpen(true);
-                            }
-                          }}
-                          className="text-sm bg-green-600 text-white hover:bg-green-700 px-3 py-1 rounded-lg shadow"
-                        >
-                          Apply to Entire PR
-                        </button>
+              {/* Table */}
+              <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Representative</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Company</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Address</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">TIN</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {currentSuppliers.length > 0 ? (
+                      currentSuppliers.map((supplier) => {
+                        const isDisabled = rfq_details.some(
+                          (q) => q.pr_details_id === selectedItemId && q.supplier_id === supplier.id
+                        );
+                        return (
+                          <tr key={supplier.id} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 font-medium text-slate-900">{supplier.representative_name}</td>
+                            <td className="px-4 py-3 text-slate-700">{supplier.company_name}</td>
+                            <td className="px-4 py-3 text-slate-600 text-xs">{supplier.address}</td>
+                            <td className="px-4 py-3 text-slate-600 text-xs">{supplier.tin_num}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-2">
+                                <button
+                                  disabled={isDisabled}
+                                  onClick={() => {
+                                    const priceValue = selectedItemId === null ? "" : estimatedPrice[selectedItemId] || "";
+                                    const finalBid = priceValue.toString().trim() || (pr.details?.find((d) => d.id === selectedItemId)?.unit_price || "");
+                                    addSelection(selectedItemId, supplier.id, finalBid);
+                                    setEstimatedPrice((prev) => ({ ...prev, [selectedItemId]: finalBid }));
+                                    setSelectedSuppliersByItem((prev) => {
+                                      const current = prev[selectedItemId] || [];
+                                      if (current.includes(supplier.id)) return prev;
+                                      return { ...prev, [selectedItemId]: [...current, supplier.id] };
+                                    });
+                                    setSelectedSupplierId(String(supplier.id));
+                                    setShowModal(false);
+                                  }}
+                                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg disabled:opacity-50"
+                                >
+                                  Select
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const updatedSelectedSuppliers = { ...selectedSuppliersByItem };
+                                    const updatedPrices = { ...estimatedPrice };
+                                    const skipped = [];
+                                    pr.details.forEach((detail) => {
+                                      const alreadyQuoted = rfq_details.some(
+                                        (q) => q.pr_details_id === detail.id && q.supplier_id === supplier.id
+                                      );
+                                      if (alreadyQuoted) {
+                                        skipped.push(detail.item_description || `Item #${detail.id}`);
+                                      } else {
+                                        const price = detail.unit_price || "";
+                                        updatedPrices[detail.id] = price;
+                                        addSelection(detail.id, supplier.id, price);
+                                        const current = updatedSelectedSuppliers[detail.id] || [];
+                                        if (!current.includes(supplier.id)) {
+                                          updatedSelectedSuppliers[detail.id] = [...current, supplier.id];
+                                        }
+                                      }
+                                    });
+                                    setEstimatedPrice(updatedPrices);
+                                    setSelectedSuppliersByItem(updatedSelectedSuppliers);
+                                    setSelectedSupplierId(String(supplier.id));
+                                    setEntirePRSupplier(supplier.id);
+                                    setShowModal(false);
+                                    if (skipped.length > 0) {
+                                      setSkippedItems(skipped);
+                                      setWarningDialogOpen(true);
+                                    }
+                                  }}
+                                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg"
+                                >
+                                  Apply All
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="text-center py-8 text-slate-400">
+                          No suppliers found
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan="7"
-                        className="text-center py-6 text-gray-400 italic"
-                      >
-                        No suppliers available for this{" "}
-                        
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-            {/* Footer actions */}
-            <div className="mt-6 border-t pt-4 flex justify-between items-center">
-              <button
-                onClick={() => setShowAddSupplierModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm shadow-sm"
-              >
-                ➕ Add New Supplier
-              </button>
-
-              <button
-                onClick={() => {
-                  if (!selectedSupplierId) {
-                    Swal.fire("Oops!", "Please select a supplier first.", "warning");
-                    return;
-                  }
-                  setData("supplier_id", selectedSupplierId);
-                  setShowModal(false);
-                  Swal.fire("Saved!", "Supplier has been selected.", "success");
-                }}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm shadow-sm"
-              >
-                Confirm Selection
-              </button>
-            </div>
-
-            {/* Pagination */}
-            <div className="flex justify-between items-center mt-4">
-              <button
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50"
-              >
-                ← Prev
-              </button>
-              <span className="text-sm text-gray-700">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50"
-              >
-                Next →
-              </button>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-slate-600">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-
-      {/* Add Supplier Modal (simplified example) */}
+      {/* Add Supplier Modal */}
       {showAddSupplierModal && (
-        <div className="fixed inset-0 z-[999] bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative">
-            <button
-              onClick={() => setShowAddSupplierModal(false)}
-              className="absolute top-2 right-3 text-gray-500 hover:text-gray-700 text-xl font-bold"
-              aria-label="Close add supplier modal"
-            >
-              ×
-            </button>
-            <h3 className="text-lg font-semibold mb-4">Add New Supplier</h3>
-            <form onSubmit={handleSubmitSupplier} className="space-y-4">
+        <div className="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-blue-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Building2 className="w-5 h-5" />
+                  Add New Supplier
+                </h3>
+                <button
+                  onClick={() => setShowAddSupplierModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+            <form onSubmit={handleSubmitSupplier} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Representative Name</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Representative Name *</label>
                 <input
                   type="text"
                   required
                   value={newSupplier.representative_name}
                   onChange={e => setNewSupplier(prev => ({ ...prev, representative_name: e.target.value }))}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter representative name"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Company Name *</label>
                 <input
                   type="text"
                   required
                   value={newSupplier.company_name}
                   onChange={e => setNewSupplier(prev => ({ ...prev, company_name: e.target.value }))}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter company name"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Address</label>
-                <input
-                  type="text"
-                  required
-                  value={newSupplier.address}
-                  onChange={e => setNewSupplier(prev => ({ ...prev, address: e.target.value }))}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Address *</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    required
+                    value={newSupplier.address}
+                    onChange={e => setNewSupplier(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full pl-10 border border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter address"
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">TIN Number</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">TIN Number *</label>
                 <input
                   type="text"
                   required
                   value={newSupplier.tin_num}
                   onChange={e => setNewSupplier(prev => ({ ...prev, tin_num: e.target.value }))}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter TIN number"
                 />
               </div>
-              <div className="flex justify-end gap-2">
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddSupplierModal(false)}
-                  className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
+                  className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-800"
+                  className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
                 >
                   Add Supplier
                 </button>
@@ -977,7 +981,8 @@ const [skippedItems, setSkippedItems] = useState([]);
           <DialogHeader>
             <DialogTitle className={
               dialogContent.type === "error" ? "text-red-600" :
-              dialogContent.type === "success" ? "text-green-600" : ""
+              dialogContent.type === "success" ? "text-green-600" : 
+              dialogContent.type === "warning" ? "text-amber-600" : ""
             }>
               {dialogContent.title}
             </DialogTitle>
@@ -989,7 +994,7 @@ const [skippedItems, setSkippedItems] = useState([]);
             {dialogContent.type === "confirm" ? (
               <>
                 <Button
-                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md"
+                  className="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300"
                   onClick={() => {
                     setDialogOpen(false);
                     setOnConfirmAction(null);
@@ -998,7 +1003,7 @@ const [skippedItems, setSkippedItems] = useState([]);
                   Cancel
                 </Button>
                 <Button
-                  className="px-4 py-2 bg-green-600 text-white rounded-md"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                   onClick={() => {
                     if (typeof onConfirmAction === "function") {
                       onConfirmAction();
@@ -1012,7 +1017,7 @@ const [skippedItems, setSkippedItems] = useState([]);
               </>
             ) : (
               <Button
-                className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                 onClick={() => setDialogOpen(false)}
               >
                 Close
@@ -1021,20 +1026,24 @@ const [skippedItems, setSkippedItems] = useState([]);
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={warningDialogOpen} onOpenChange={setWarningDialogOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Some Items Skipped</DialogTitle>
-          <DialogDescription>
-            This supplier already quoted for some items, so they were skipped:
-          </DialogDescription>
-        </DialogHeader>
 
-        <DialogFooter className="mt-4">
-          <Button onClick={() => setWarningDialogOpen(false)}>OK</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {/* Warning Dialog */}
+      <Dialog open={warningDialogOpen} onOpenChange={setWarningDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-amber-600 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              Some Items Skipped
+            </DialogTitle>
+            <DialogDescription>
+              This supplier already quoted for some items, so they were skipped.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button onClick={() => setWarningDialogOpen(false)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </ApproverLayout>
   );
 }

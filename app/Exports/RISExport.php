@@ -115,21 +115,14 @@ class RISExport implements FromCollection, WithHeadings, WithEvents, WithMapping
 public function map($row): array
 {
     $ris = $row->ris;
-    $itm = $row->item;
+    $reqItem = $row->item;
+    $item = $reqItem?->item;
 
-    $inventoryItem = $itm?->inventoryItem;
+    $quantity = $reqItem?->issued_quantity ?? 0;
 
-    // ✅ Use item_desc directly, fallback if missing
-    $itemDesc = $inventoryItem?->item_desc
-        ?? optional($ris->po->details->first()?->prDetail?->product)->name
-        ?? '';
+    
 
-    $unit     = $inventoryItem?->unit?->unit ?? '';
-    $quantity = $itm?->quantity ?? 0;
-    $unitCost = $itm?->unit_cost ?? 0;
-    $amount   = $quantity * $unitCost;
-
-    // only show RIS number once
+    // ✅ show RIS only once
     $showRis = $this->lastRisNo !== $ris->ris_number;
     if ($showRis) {
         $this->lastRisNo = $ris->ris_number;
@@ -138,12 +131,12 @@ public function map($row): array
     return [
         $showRis ? $ris->ris_number : '',
         '', // Responsibility Center Code
-        $inventoryItem?->stock_no ?? '', // Stock No
-        $itemDesc, // ✅ Description from item_desc
-        $unit,
+        '', // Stock No
+        $item->description, // ✅ Description from item_desc
+        $item->unit,
         $quantity,
-        $unitCost ? number_format((float)$unitCost, 2, '.', ',') : '',
-        $amount ? number_format((float)$amount, 2, '.', ',') : '',
+        '',
+        '',
     ];
 }
 

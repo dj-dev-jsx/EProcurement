@@ -1,7 +1,7 @@
 import ApproverLayout from "@/Layouts/ApproverLayout";
-import SupplyOfficerLayout from "@/Layouts/SupplyOfficerLayout";
 import { Head, useForm } from "@inertiajs/react";
 import React, { useEffect } from "react";
+import { FunnelIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 
 export default function PurchaseOrder({ purchaseRequests, filters }) {
   const { data, setData, get } = useForm({
@@ -10,245 +10,232 @@ export default function PurchaseOrder({ purchaseRequests, filters }) {
   });
 
   useEffect(() => {
-    const delayDebounce = setTimeout(() => {
+    const delay = setTimeout(() => {
       get(route("bac_user.purchase_orders"), {
         preserveState: true,
         replace: true,
       });
-    }, 300);
+    }, 400);
 
-    return () => clearTimeout(delayDebounce);
+    return () => clearTimeout(delay);
   }, [data.search, data.division]);
 
   return (
-    <ApproverLayout header="Schools Division Office - Ilagan | Create Purchase Order">
-      <Head title="Purchase Order" />
+    <ApproverLayout header="Create Purchase Orders">
+      <Head title="Purchase Orders" />
 
-      {/* Header and Search */}
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
-        <h2 className="text-3xl font-bold text-gray-800">
-          Purchase Requests with Selected Suppliers
-        </h2>
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 bg-gray-50 min-h-screen">
 
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          className="flex flex-wrap items-center gap-3"
-        >
-          <input
-            type="text"
-            name="search"
-            placeholder="Search PR number or focal person"
-            className="w-96 border border-gray-300 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={data.search}
-            onChange={(e) => setData("search", e.target.value)}
-          />
-          <select
-            value={data.division}
-            onChange={(e) => setData("division", e.target.value)}
-            className="border border-gray-300 px-10 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Divisions</option>
-            {filters.divisions.map((division) => (
-              <option key={division.id} value={division.id}>
-                {division.division}
-              </option>
-            ))}
-          </select>
-        </form>
-      </div>
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Create Purchase Orders
+          </h1>
+          <p className="text-sm text-gray-500">
+            Generate purchase orders from winning suppliers
+          </p>
+        </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm bg-white">
-        <table className="w-full table-auto text-sm divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {[
-                "PR Number",
-                "Focal Person",
-                "Division",
-                "Item",
-                "Specs",
-                "Quantity",
-                "Unit",
-                "Winner Supplier",
-                "Quoted Price",
-                "Actions",
-              ].map((title) => (
-                <th
-                  key={title}
-                  className="px-6 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide text-center whitespace-nowrap"
-                >
-                  {title}
-                </th>
+        {/* Filters */}
+        <div className="bg-white rounded-2xl border shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <FunnelIcon className="w-5 h-5 text-gray-500" />
+            <h3 className="text-sm font-semibold text-gray-700">Filters</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="Search PR number or focal person"
+              value={data.search}
+              onChange={(e) => setData("search", e.target.value)}
+              className="rounded-lg border-gray-300 px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
+            />
+
+            <select
+              value={data.division}
+              onChange={(e) => setData("division", e.target.value)}
+              className="rounded-lg border-gray-300 px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">All Divisions</option>
+              {filters.divisions.map((division) => (
+                <option key={division.id} value={division.id}>
+                  {division.division}
+                </option>
               ))}
-            </tr>
-          </thead>
+            </select>
+          </div>
+        </div>
 
-          <tbody className="divide-y divide-gray-100 text-center">
-            {purchaseRequests.data.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={10}
-                  className="py-12 text-gray-500 text-lg font-medium"
-                >
-                  No Purchase Requests with winners found.
-                </td>
-              </tr>
-            ) : (
-              purchaseRequests.data.map((pr) => {
-                // ✅ PR details that won
-                const winningDetails = pr.details.filter((detail) =>
-                  pr.rfqs
-                    ?.flatMap((r) => r.details)
-                    .some(
-                      (d) =>
-                        d.pr_details_id === detail.id &&
-                        d.is_winner_as_calculated
-                    )
-                );
+        {/* Table Card */}
+        <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
 
-                if (winningDetails.length === 0) return null;
+          {purchaseRequests.data.length === 0 ? (
+            <div className="py-16 flex flex-col items-center text-center">
+              <DocumentTextIcon className="w-12 h-12 text-gray-300 mb-3" />
+              <p className="text-gray-500 text-lg">
+                No Purchase Requests with winners
+              </p>
+              <span className="text-sm text-gray-400">
+                Only requests with selected suppliers appear here
+              </span>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-100 sticky top-0 z-10">
+                    <tr className="text-gray-600 text-xs uppercase">
+                      <th className="px-6 py-3 text-left">PR #</th>
+                      <th className="px-6 py-3 text-left">Focal</th>
+                      <th className="px-6 py-3 text-left">Division</th>
+                      <th className="px-6 py-3 text-left">Summary</th>
+                      <th className="px-6 py-3 text-left">Supplier / Amount</th>
+                      <th className="px-6 py-3 text-center">Action</th>
+                    </tr>
+                  </thead>
 
-                // ✅ RFQ details that won
-                const winners = pr.rfqs
-                  ?.flatMap((r) => r.details ?? [])
-                  .filter(
-                    (d) =>
-                      winningDetails.some((wd) => wd.id === d.pr_details_id) &&
-                      d.is_winner_as_calculated
-                  );
+                  <tbody className="divide-y">
+                    {purchaseRequests.data.map((pr) => {
+                      const winningDetails = pr.details.filter((detail) =>
+                        pr.rfqs
+                          ?.flatMap((r) => r.details)
+                          .some(
+                            (d) =>
+                              d.pr_details_id === detail.id &&
+                              d.is_winner_as_calculated
+                          )
+                      );
 
-                // ✅ Compute total price (frontend)
-                const totalQuotedPrice = winners.reduce((sum, w) => {
-                  const prDetail = winningDetails.find(
-                    (d) => d.id === w.pr_details_id
-                  );
-                  const qty = prDetail?.quantity ?? 1;
-                  const price =
-                    w.unit_price_edited ?? w.quoted_price ?? 0;
-                  return sum + price * qty;
-                }, 0);
+                      if (winningDetails.length === 0) return null;
 
-                return (
-                  <tr
-                    key={`pr-${pr.id}`}
-                    className="hover:bg-blue-50 transition duration-200"
-                  >
-                    <td className="px-6 py-4 font-semibold text-blue-700 whitespace-nowrap">
-                      {pr.pr_number}
-                    </td>
-                    <td className="px-6 py-4">
-                      {pr.focal_person.firstname} {pr.focal_person.lastname}
-                    </td>
-                    <td className="px-6 py-4">{pr.division.division}</td>
+                      const winners = pr.rfqs
+                        ?.flatMap((r) => r.details ?? [])
+                        .filter(
+                          (d) =>
+                            winningDetails.some(
+                              (wd) => wd.id === d.pr_details_id
+                            ) && d.is_winner_as_calculated
+                        );
 
-                    {/* Item */}
-                    <td className="px-6 py-4">
-                      {winningDetails[0]?.item || "—"}
-                      {winningDetails.length > 1 && (
-                        <span className="text-gray-400 text-xs ml-1 italic">
-                          +{winningDetails.length - 1} more
-                        </span>
-                      )}
-                    </td>
+                      const totalQuotedPrice = winners.reduce((sum, w) => {
+                        const prDetail = winningDetails.find(
+                          (d) => d.id === w.pr_details_id
+                        );
+                        const qty = prDetail?.quantity ?? 1;
+                        const price =
+                          w.unit_price_edited ?? w.quoted_price ?? 0;
+                        return sum + price * qty;
+                      }, 0);
 
-                    {/* Specs */}
-                    <td className="px-6 py-4">
-                      {winningDetails[0]?.specs || "—"}
-                      {winningDetails.length > 1 && (
-                        <span className="text-gray-400 text-xs ml-1 italic">
-                          +{winningDetails.length - 1} more
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Quantity */}
-                    <td className="px-6 py-4">
-                      {winningDetails[0]?.quantity || "—"}
-                      {new Set(winningDetails.map((d) => d.quantity)).size >
-                        1 && (
-                        <span className="text-gray-400 text-xs ml-1 italic">
-                          +{winningDetails.length - 1} more
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Unit */}
-                    <td className="px-6 py-4">
-                      {winningDetails[0]?.unit || "—"}
-                      {new Set(
-                        winningDetails.map((d) => d.product.unit.unit)
-                      ).size > 1 && (
-                        <span className="text-gray-400 text-xs ml-1 italic">
-                          +{winningDetails.length - 1} more
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Winner Supplier */}
-                    <td className="px-6 py-4">
-                      {[
+                      const supplierList = [
                         ...new Set(
                           winners.map(
                             (w) => w.supplier?.company_name || "N/A"
                           )
                         ),
-                      ].join(", ")}
-                    </td>
+                      ];
 
-                    {/* Total Quoted Price */}
-                    <td className="px-6 py-4">
-                      ₱{" "}
-                      {totalQuotedPrice.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
+                      return (
+                        <tr key={pr.id} className="hover:bg-gray-50 transition">
 
-                    {/* Action */}
-                    <td className="px-6 py-4 align-middle">
-                      <a
-                        href={route("bac_user.create_po", pr.id)}
-                        className={`inline-block px-4 py-2 text-sm font-medium rounded-md transition ${
-                          pr.has_po
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-blue-600 text-white hover:bg-blue-700"
-                        }`}
-                        onClick={(e) => pr.has_po && e.preventDefault()}
-                      >
-                        {pr.has_po ? "PO Generated" : "Purchase Order"}
-                      </a>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                          {/* PR */}
+                          <td className="px-6 py-4 font-semibold text-indigo-600">
+                            {pr.pr_number}
+                          </td>
 
-      {/* Pagination */}
-      <div className="mt-6 flex justify-center flex-wrap gap-1">
-        {purchaseRequests.links.map((link, i) => (
-          <button
-            key={i}
-            disabled={!link.url}
-            onClick={() =>
-              link.url &&
-              get(link.url, {
-                data,
-                preserveState: true,
-                preserveScroll: true,
-              })
-            }
-            className={`px-3 py-1 text-sm border rounded-md ${
-              link.active
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-100"
-            }`}
-            dangerouslySetInnerHTML={{ __html: link.label }}
-          />
-        ))}
+                          {/* Focal */}
+                          <td className="px-6 py-4 text-gray-600">
+                            {pr.focal_person.firstname}{" "}
+                            {pr.focal_person.lastname}
+                          </td>
+
+                          {/* Division */}
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 text-xs bg-indigo-50 text-indigo-600 rounded-full">
+                              {pr.division.division}
+                            </span>
+                          </td>
+
+                          {/* Summary */}
+                          <td className="px-6 py-4 text-gray-600">
+                            {winningDetails[0]?.item}
+                            {winningDetails.length > 1 && (
+                              <span className="text-xs text-gray-400 ml-1">
+                                +{winningDetails.length - 1}
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Supplier + Price */}
+                          <td className="px-6 py-4">
+                            <div className="text-gray-700">
+                              {supplierList.join(", ")}
+                            </div>
+                            <div className="text-sm font-semibold text-indigo-600">
+                              ₱{totalQuotedPrice.toLocaleString()}
+                            </div>
+                          </td>
+
+                          {/* Action */}
+                          <td className="px-6 py-4 text-center">
+                            {pr.has_po ? (
+                              <span className="px-3 py-1 text-xs bg-gray-200 text-gray-600 rounded-full">
+                                PO Generated
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  window.location.href = route(
+                                    "bac_user.create_po",
+                                    pr.id
+                                  )
+                                }
+                                className="px-3 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition"
+                              >
+                                Create PO
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="flex justify-between items-center p-4 border-t bg-gray-50">
+                <span className="text-sm text-gray-500">
+                  Showing {purchaseRequests.from} - {purchaseRequests.to}
+                </span>
+
+                <div className="flex gap-2 flex-wrap">
+                  {purchaseRequests.links.map((link, i) => (
+                    <button
+                      key={i}
+                      disabled={!link.url}
+                      onClick={() =>
+                        link.url &&
+                        get(link.url, {
+                          data,
+                          preserveState: true,
+                          preserveScroll: true,
+                        })
+                      }
+                      className={`px-3 py-1 text-sm rounded-md ${
+                        link.active
+                          ? "bg-indigo-600 text-white"
+                          : "bg-white border hover:bg-gray-100"
+                      } ${!link.url && "opacity-40 cursor-not-allowed"}`}
+                      dangerouslySetInnerHTML={{ __html: link.label }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </ApproverLayout>
   );

@@ -26,7 +26,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('tbl_bac_committees');
         Schema::dropIfExists('tbl_bac_committee_members');
+        Schema::dropIfExists('tbl_bac_committees');
     }
 };

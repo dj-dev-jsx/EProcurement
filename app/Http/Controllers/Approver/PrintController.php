@@ -152,10 +152,6 @@ public function printAOQ($id)
         $query->where('status', 'active');
     }])->where('committee_status', 'active')->first();
 
-    // ----------------------
-    // ALWAYS USE FULL AOQ MODE
-    // (Disregard award_mode and is_winner_as_read)
-    // ----------------------
 
     $prItemCount = $rfq->purchaseRequest->details->count();
 
@@ -348,9 +344,6 @@ public function printAoqPerItemGrouped($id)
         }
     }
 
-    // Prepare final groups array for the view
-    // For each winner (group), we will collect ALL suppliers who quoted on the items
-    // that the winner won, compute their totals for those items, and mark the winner.
     $groups = [];
     foreach ($groupsMap as $sid => $g) {
         $prDetailIds = collect($g['lines'])->pluck('pr_detail_id')->filter()->values()->all();
