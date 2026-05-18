@@ -1,9 +1,22 @@
 import { useForm } from "@inertiajs/react";
-import { FileText, SendHorizonal, Plus, Minus } from "lucide-react";
+import { 
+  FileText, SendHorizonal, Package, 
+  User, Building2, ClipboardList, CheckCircle2, 
+  AlertCircle, ChevronDown, ChevronUp, Save,
+  Calculator, Calendar, Users, AlertTriangle, Box,
+  MapPin, School, Tag, Hash, Clock
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import AutoCompleteInput from "./AutoCompleteInput";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 export default function ParForm({ purchaseOrder, inventoryItems = [], user, ppeOptions = [], parNumber }) {
@@ -32,6 +45,7 @@ export default function ParForm({ purchaseOrder, inventoryItems = [], user, ppeO
       quantity: item.total_stock > 0 ? 1 : 0,
       unit_cost: item.unit_cost ?? 0,
       total_cost: item.unit_cost ?? 0,
+      total_stock: item.total_stock ?? 0,
       series_number: "0001",
       description: item.item_desc ?? item.product?.item_description ?? "N/A",
       ppe: null,
@@ -43,8 +57,26 @@ export default function ParForm({ purchaseOrder, inventoryItems = [], user, ppeO
 
   const { toast } = useToast();
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [expandedItems, setExpandedItems] = useState({});
   const [defaultRecipient, setDefaultRecipient] = useState("");
   const [defaultDivision, setDefaultDivision] = useState("");
+
+  // Calculate totals
+  const totals = data.items.reduce((acc, item) => ({
+    quantity: acc.quantity + (parseFloat(item.quantity) || 0),
+    cost: acc.cost + (parseFloat(item.total_cost) || 0),
+  }), { quantity: 0, cost: 0 });
+
+  // Initialize all items as expanded
+  useEffect(() => {
+    const initial = {};
+    data.items.forEach((_, idx) => { initial[idx] = true; });
+    setExpandedItems(initial);
+  }, []);
+
+  const toggleItem = (index) => {
+    setExpandedItems(prev => ({ ...prev, [index]: !prev[index] }));
+  };
 
   const generateNumberForItem = async () => {
     const itemsToGenerate = data.items.filter(item => item.ppe && item.gl && item.quantity > 0);
@@ -94,13 +126,23 @@ export default function ParForm({ purchaseOrder, inventoryItems = [], user, ppeO
   const handleItemChange = (index, field, value) => {
     const updatedItems = [...data.items];
     if (field === "quantity") {
-      const qty = Math.min(parseFloat(value) || 0, inventoryItems[index].total_stock);
+      let qty = parseFloat(value) || 0;
+      if (qty > updatedItems[index].total_stock) qty = updatedItems[index].total_stock;
+      if (qty < 0) qty = 0;
       updatedItems[index].quantity = qty;
       updatedItems[index].total_cost = qty * (updatedItems[index].unit_cost ?? 0);
     } else {
       updatedItems[index][field] = value;
     }
     setData("items", updatedItems);
+  };
+
+  const handleRemoveItem = index => {
+    const updatedItems = data.items.filter((_, i) => i !== index);
+    setData("items", updatedItems);
+    const newExpanded = {};
+    updatedItems.forEach((_, i) => { newExpanded[i] = true; });
+    setExpandedItems(newExpanded);
   };
 
   const handleItemPPEChange = (index, selectedPPE) => {
@@ -155,133 +197,296 @@ export default function ParForm({ purchaseOrder, inventoryItems = [], user, ppeO
       },
     });
   };
-  const isCentral = inventoryItems.some(
-    (item) => item.source_type === "central"
-  );
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-md">
-      <h2 className="text-3xl font-bold text-blue-800 mb-4 flex items-center gap-2">
-        <FileText size={24} /> Property Acknowledgement Receipt (PAR)
-      </h2>
 
+  const isCentral = inventoryItems.some((item) => item.source_type === "central");
+
+  return (
+    <div className="max-w-5xl mx-auto">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-2xl p-6 mb-6 text-white shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-white/20 rounded-xl">
+            <FileText size={28} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">Property Acknowledgement Receipt (PAR)</h2>
+            <p className="text-emerald-100 text-sm">Record and manage property issuances</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Error Alert */}
       {Object.keys(errors).length > 0 && (
-        <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
-          <ul className="list-disc list-inside">
-            {Object.entries(errors).map(([key, message]) => <li key={key}>{message}</li>)}
-          </ul>
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-red-500 mt-0.5" size={20} />
+            <div>
+              <h4 className="font-semibold text-red-700">Validation Errors</h4>
+              <ul className="mt-2 space-y-1">
+                {Object.entries(errors).map(([key, message]) => <li key={key} className="text-sm text-red-600">• {message}</li>)}
+              </ul>
+            </div>
+          </div>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {data.items.map((item, index) => (
-          <div key={index} className="p-5 border rounded-md bg-green-50 relative">
-            {data.items.length > 1 && (
-              <button type="button" onClick={() => setData("items", data.items.filter((_, i) => i !== index))} className="absolute top-2 right-2 text-red-600 hover:text-red-800">
-                <Minus size={20} />
-              </button>
-            )}
-            <h3 className="text-lg font-semibold text-green-700 mb-4">Item {index + 1}</h3>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Description</label>
-              <input value={item.description} readOnly className="w-full mt-1 px-3 py-2 border rounded-md shadow-sm bg-white" />
-            </div>
-
-            {/* PPE / GL / Office / School / Inventory No */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">PPE Sub-major Account</label>
-                <select value={item.ppe?.id || ""} onChange={e => handleItemPPEChange(index, ppeOptions.find(p => p.id == e.target.value))} className="w-full mt-1 px-3 py-2 border rounded-md shadow-sm">
-                  <option value="">Select PPE</option>
-                  {ppeOptions.map(p => <option key={p.id} value={p.id}>{p.code ? `${p.code} - ${p.name}` : p.name}</option>)}
-                </select>
+        {/* PAR Info Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-gray-50/80 px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+            <ClipboardList size={20} className="text-emerald-600" />
+            <h3 className="text-lg font-semibold text-gray-900">PAR Information</h3>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</label>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                  <Building2 size={18} className="text-gray-400" />
+                  <span className="text-sm font-medium text-gray-900">{pr?.division?.division ?? "N/A"}</span>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">General Ledger Account</label>
-                <select value={item.gl?.id || ""} onChange={e => handleItemGLChange(index, item.ppe?.general_ledger_accounts.find(g => g.id == e.target.value))} disabled={!item.ppe} className="w-full mt-1 px-3 py-2 border rounded-md shadow-sm disabled:bg-gray-100">
-                  <option value="">Select GL</option>
-                  {item.ppe?.general_ledger_accounts?.map(g => <option key={g.id} value={g.id}>{g.code ? `${g.code} - ${g.name}` : g.name}</option>)}
-                </select>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">PAR Number</label>
+                <div className="relative">
+                  <input type="text" value={data.par_number} onChange={e => setData("par_number", e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" placeholder="Enter PAR number" />
+                  <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                </div>
               </div>
-              <AutoCompleteInput label="Location Office" apiRoute="/api/office-search" value={item.officeObj?.code || ""} onChange={val => handleItemOfficeChange(index, val)} placeholder="Type Location Office..." />
-              {item.officeObj?.name === "Schools" && <AutoCompleteInput label="School" apiRoute="/api/school-search" value={item.schoolObj?.name || ""} onChange={val => handleItemSchoolChange(index, val)} placeholder="Type School..." />}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Inventory Item No.</label>
-                <input value={item.inventory_item_number || ""} readOnly className="w-full mt-1 px-3 py-2 border rounded-md shadow-sm bg-gray-100" />
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Requested By</label>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                  <User size={18} className="text-gray-400" />
+                  <span className="text-sm font-medium text-gray-900">{focal}</span>
+                </div>
               </div>
-            </div>
-
-            {/* Quantity / Cost / Estimated Life */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Quantity</label>
-                <input type="number" min="1" max={inventoryItems[index]?.total_stock} value={item.quantity} onChange={e => handleItemChange(index, "quantity", e.target.value)} className="w-full mt-1 px-3 py-2 border rounded-md shadow-sm" />
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Date Acquired</label>
+                <div className="relative">
+                  <input type="date" value={data.date_acquired} onChange={e => setData("date_acquired", e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" />
+                  <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Unit Cost</label>
-                <input type="number" value={item.unit_cost} readOnly className="w-full mt-1 px-3 py-2 border rounded-md shadow-sm bg-gray-50" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Total Cost</label>
-                <input type="number" value={item.total_cost} readOnly className="w-full mt-1 px-3 py-2 border rounded-md shadow-sm bg-gray-50" />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700">Estimated Useful Life (years)</label>
-              <input type="number" value={item.estimated_useful_life ?? ""} onChange={e => handleItemChange(index, "estimated_useful_life", e.target.value)} className="w-full mt-1 px-3 py-2 border rounded-md shadow-sm" onWheel={e => e.currentTarget.blur()} required/>
             </div>
           </div>
-        ))}
+        </div>
+
+        {/* Items Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-gray-50/80 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Package size={20} className="text-emerald-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Items to Issue</h3>
+              <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-lg">
+                {data.items.length} item{data.items.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+
+          <div className="divide-y divide-gray-100">
+            {data.items.map((item, index) => (
+              <div key={index} className="group">
+                {/* Item Header */}
+                <div className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => toggleItem(index)}>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${expandedItems[index] ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{item.description}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-md">
+                          <Box size={12} /> Stock: {item.total_stock}
+                        </span>
+                        <span className="text-xs text-gray-400">Max issuable: {item.total_stock}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">₱{parseFloat(item.total_cost || 0).toFixed(2)}</p>
+                      <p className="text-xs text-gray-500">{item.quantity} qty</p>
+                    </div>
+                    {expandedItems[index] ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
+                  </div>
+                </div>
+
+                {/* Item Details - Expandable */}
+                {expandedItems[index] && (
+                  <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100">
+                    {/* PPE / GL / Office / School / Inventory Number */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">PPE Sub-major Account</label>
+                        <select value={item.ppe?.id || ""} onChange={e => handleItemPPEChange(index, ppeOptions.find(p => p.id == e.target.value))} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                          <option value="">Select PPE</option>
+                          {ppeOptions.map(p => <option key={p.id} value={p.id}>{p.code ? `${p.code} - ${p.name}` : p.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">General Ledger Account</label>
+                        <select value={item.gl?.id || ""} onChange={e => handleItemGLChange(index, item.ppe?.general_ledger_accounts.find(g => g.id == e.target.value))} disabled={!item.ppe} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all disabled:bg-gray-100">
+                          <option value="">Select GL</option>
+                          {item.ppe?.general_ledger_accounts?.map(g => <option key={g.id} value={g.id}>{g.code ? `${g.code} - ${g.name}` : g.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Location Office</label>
+                        <AutoCompleteInput label="" apiRoute="/api/office-search" value={item.officeObj?.code || ""} onChange={val => handleItemOfficeChange(index, val)} placeholder="Type Location Office..." />
+                      </div>
+                      {item.officeObj?.name === "Schools" && (
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">School</label>
+                          <AutoCompleteInput label="" apiRoute="/api/school-search" value={item.schoolObj?.name || ""} onChange={val => handleItemSchoolChange(index, val)} placeholder="Type School..." />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Inventory Item No.</label>
+                        <div className="p-2.5 bg-gray-100 rounded-xl border border-gray-200">
+                          <span className="text-sm font-mono text-gray-600">{item.inventory_item_number || "—"}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quantity / Cost / Estimated Life */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</label>
+                        <div className="relative">
+                          <input type="number" min="0" max={item.total_stock} value={item.quantity} onChange={e => handleItemChange(index, "quantity", e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" />
+                          <Calculator size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        </div>
+                        <p className="text-xs text-emerald-600 font-medium">Available: {item.total_stock} units</p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Cost</label>
+                        <div className="p-2.5 bg-gray-100 rounded-xl border border-gray-200">
+                          <span className="text-sm font-medium text-gray-600">₱ {parseFloat(item.unit_cost || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Cost</label>
+                        <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
+                          <span className="text-sm font-bold text-emerald-700">₱ {parseFloat(item.total_cost || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Estimated Useful Life (years)</label>
+                      <div className="relative">
+                        <input type="number" value={item.estimated_useful_life ?? ""} onChange={e => handleItemChange(index, "estimated_useful_life", e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" onWheel={e => e.currentTarget.blur()} required />
+                        <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      </div>
+                    </div>
+
+                    {/* Remove Button */}
+                    {data.items.length > 1 && (
+                      <div className="mt-4 flex justify-end">
+                        <button type="button" onClick={() => handleRemoveItem(index)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-red-600 text-sm hover:bg-red-50 rounded-lg transition-colors">
+                          Remove Item
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Summary Footer */}
+          <div className="px-6 py-4 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-500">Total Items:</span>
+              <span className="text-sm font-semibold text-gray-900">{data.items.length}</span>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <p className="text-xs text-gray-500">Total Quantity</p>
+                <p className="text-lg font-bold text-gray-900">{totals.quantity}</p>
+              </div>
+              <div className="w-px h-8 bg-gray-200"></div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500">Total Cost</p>
+                <p className="text-lg font-bold text-emerald-600">₱ {totals.cost.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Default Recipient */}
-        <div className="p-5 border rounded-md bg-yellow-50">
-          <h3 className="text-lg font-semibold text-yellow-700 mb-4">
-            Default Recipient (applied to all items)
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-gray-50/80 px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+            <Users size={20} className="text-amber-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Recipient Details</h3>
             {isCentral && (
-              <span className="text-red-600 ml-2 text-sm font-normal">
-                * Required for CENTRAL sourced items
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-lg">
+                <AlertTriangle size={12} /> Required for Central
               </span>
             )}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Recipient Name {isCentral && <span className="text-red-600">*</span>}
-              </label>
-              <input type="text" value={defaultRecipient} onChange={e => { setDefaultRecipient(e.target.value); setData("items", data.items.map(i => ({ ...i, recipient: e.target.value }))); }} placeholder="Leave blank to issue to requester" className="w-full mt-1 px-3 py-2 border rounded-md shadow-sm" required={isCentral}/>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Recipient Division {isCentral && <span className="text-red-600">*</span>}
-              </label>
-              <input type="text" value={defaultDivision} onChange={e => { setDefaultDivision(e.target.value); setData("items", data.items.map(i => ({ ...i, recipient_division: e.target.value }))); }} placeholder="Optional" className="w-full mt-1 px-3 py-2 border rounded-md shadow-sm" 
-              required={isCentral}/>
+          </div>
+          <div className="p-6">
+            <p className="text-sm text-gray-500 mb-4">These values will be applied to all items above</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Recipient Name {isCentral && <span className="text-red-500"> *</span>}</label>
+                <div className="relative">
+                  <input type="text" value={defaultRecipient} onChange={e => { setDefaultRecipient(e.target.value); setData("items", data.items.map(i => ({ ...i, recipient: e.target.value }))); }} placeholder="Leave blank to issue to requester" className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" required={isCentral} />
+                  <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Recipient Division {isCentral && <span className="text-red-500"> *</span>}</label>
+                <div className="relative">
+                  <input type="text" value={defaultDivision} onChange={e => { setDefaultDivision(e.target.value); setData("items", data.items.map(i => ({ ...i, recipient_division: e.target.value }))); }} placeholder="Optional" className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" required={isCentral} />
+                  <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Remarks</label>
-          <textarea value={data.remarks} onChange={e => setData("remarks", e.target.value)} rows="4" className="w-full mt-1 px-3 py-2 border rounded-md shadow-sm" placeholder="Optional" />
+        {/* Remarks */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks (Optional)</label>
+              <textarea value={data.remarks} onChange={e => setData("remarks", e.target.value)} rows="3" className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none" placeholder="Add any additional notes or comments..." />
+            </div>
+          </div>
         </div>
 
-        <div className="flex justify-end">
-          <button type="submit" className="inline-flex items-center px-6 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-800" disabled={processing}>
-            <SendHorizonal size={16} className="mr-2" /> {processing ? "Saving..." : "Save PAR"}
+        {/* Submit Button */}
+        <div className="flex justify-end gap-4">
+          <button type="button" onClick={() => window.history.back()} className="px-6 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors">
+            Cancel
+          </button>
+          <button type="submit" className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-medium rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-lg shadow-emerald-500/30" disabled={processing}>
+            {processing ? (<><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Saving...</>) : (<><Save size={18} /> Save PAR</>)}
           </button>
         </div>
       </form>
 
+      {/* Confirmation Dialog */}
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirm Save</DialogTitle>
-            <DialogDescription>Are you sure you want to save this PAR issuance?</DialogDescription>
+          <DialogHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle2 size={24} className="text-emerald-600" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-center">Confirm PAR Issuance</DialogTitle>
+            <DialogDescription className="text-center">Are you sure you want to save this Property Acknowledgement Receipt? This action cannot be undone.</DialogDescription>
           </DialogHeader>
-          <DialogFooter className="mt-4 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setConfirmDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleConfirmSave}>Yes, Save PAR</Button>
+          <div className="bg-gray-50 rounded-xl p-4 my-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div><p className="text-gray-500">Items</p><p className="font-semibold text-gray-900">{data.items.length}</p></div>
+              <div><p className="text-gray-500">Total Quantity</p><p className="font-semibold text-gray-900">{totals.quantity}</p></div>
+              <div className="col-span-2"><p className="text-gray-500">Total Cost</p><p className="text-xl font-bold text-emerald-600">₱ {totals.cost.toFixed(2)}</p></div>
+            </div>
+          </div>
+          <DialogFooter className="flex gap-3">
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)} className="flex-1">Cancel</Button>
+            <Button onClick={handleConfirmSave} className="flex-1 bg-emerald-600 hover:bg-emerald-700">Yes, Save PAR</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
