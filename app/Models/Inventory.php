@@ -10,7 +10,7 @@ class Inventory extends Model
     /** @use HasFactory<\Database\Factories\InventoryFactory> */
     use HasFactory;
     protected $table = 'tbl_inventory';
-    protected $fillable = ['dr_number', 'iar_id', 'dr_date', 'recorded_by', 'requested_by', 'po_detail_id', 'item_desc', 'total_stock', 'unit_id', 'unit_cost', 'last_received', 'status', 'source_type'];
+    protected $fillable = ['dr_number', 'iar_id', 'dr_date', 'recorded_by', 'requested_by', 'requested_by_office', 'po_detail_id', 'item_desc', 'total_stock', 'unit_id', 'unit_cost', 'last_received', 'status', 'source_type'];
 
     public function recordedBy(){
         return $this->belongsTo(User::class, 'recorded_by');
@@ -18,10 +18,6 @@ class Inventory extends Model
     public function unit()
     {
         return $this->belongsTo(Unit::class, 'unit_id');
-    }
-    public function requestedBy()
-    {
-        return $this->belongsTo(User::class, 'requested_by');
     }
     public function product() {
         return $this->belongsTo(Products::class);

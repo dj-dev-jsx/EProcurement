@@ -12,7 +12,7 @@ class PurchaseOrder extends Model
     /** @use HasFactory<\Database\Factories\PurchaseOrderFactory> */
     use HasFactory;
     protected $table = 'tbl_purchase_orders';
-    protected $fillable = ['po_number', 'rfq_id', 'supplier_id', 'user_id', 'recorded_by', 'status', 'mode_of_procurement'];
+    protected $fillable = ['po_number', 'rfq_id', 'requested_by', 'requested_by_id', 'requested_by_office', 'supplier_id', 'recorded_by', 'status', 'mode_of_procurement'];
 
     public function details()
     {
@@ -25,9 +25,16 @@ class PurchaseOrder extends Model
     public function supplier() {
         return $this->belongsTo(Supplier::class, 'supplier_id');
     }
+
     public function iar(){
         return $this->hasOne(IAR::class, 'po_id');
     }
+
+    public function iars()
+    {
+        return $this->hasMany(IAR::class, 'po_id');
+    }
+
     public function recordedBy()
     {
         return $this->belongsTo(User::class, 'recorded_by'); // Assuming User is a model  

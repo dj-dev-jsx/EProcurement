@@ -118,6 +118,14 @@ export default function SupplyOfficerLayout({ header, children }) {
             </NavLink>
             {/* <PORequestsDropdown isSidebarCollapsed={false} /> */}
             <NavLink
+              href={route('supply_officer.purchase_orders')}
+              active={route().current('supply_officer.purchase_orders')}
+              className="flex items-center gap-2 px-4 py-2 hover:bg-indigo-600 rounded-lg"
+            >
+              <BoxIcon className="w-5 h-5 text-gray-300" />
+              <span className="text-white text-sm">Generate PO</span>
+            </NavLink>
+            <NavLink
               href={route('supply_officer.purchase_orders_table')}
               active={route().current('supply_officer.purchase_orders_table')}
               className="flex items-center gap-2 px-4 py-2 hover:bg-indigo-600 rounded-lg"
@@ -221,6 +229,7 @@ export default function SupplyOfficerLayout({ header, children }) {
                 </span>
               )}
             </button>
+
 
             {showNotifications && (
               <div

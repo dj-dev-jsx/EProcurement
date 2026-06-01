@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('tbl_pr_details', function (Blueprint $table) {
             $table->id();
 
-            // Foreign key to purchase request
-            $table->foreignId('pr_id')
-                  ->constrained('tbl_purchase_requests')
-                  ->restrictOnDelete();
+            // // Foreign key to purchase request
+            // $table->foreignId('pr_id')
+            //       ->constrained('tbl_purchase_requests')
+            //       ->restrictOnDelete();
 
             // Foreign key to products
             $table->foreignId('product_id')

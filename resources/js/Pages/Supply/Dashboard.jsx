@@ -66,6 +66,12 @@ const iconMap = {
                 </p>
             </div>
 
+            <div className="flex justify-center mb-6">
+                <Link href={route('supply_officer.create_po')} className="inline-flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700">
+                    Add PO
+                </Link>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 {stats.map((stat, idx) => {
                     const Icon = iconMap[stat.icon];

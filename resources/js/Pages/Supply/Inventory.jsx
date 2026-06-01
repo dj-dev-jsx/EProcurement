@@ -34,7 +34,8 @@ export default function Inventory({ inventoryData, filters }) {
         grouped.set(po.id, {
           po_id: po.id,
           po: po,
-          requested_by: inv.requested_by,
+          requested_by: po.requested_by,
+          requested_by_office: po.requested_by_office,
           items: [],
         });
       }
@@ -339,13 +340,11 @@ export default function Inventory({ inventoryData, filters }) {
                       <td className="px-4 py-3">
                         <div className="flex flex-col">
                           <span className="text-sm font-medium text-gray-900">
-                            {group.requested_by
-                              ? [group.requested_by.firstname, group.requested_by.middlename, group.requested_by.lastname]
-                                  .filter(Boolean)
-                                  .join(" ")
-                              : "N/A"}
+                            {group.requested_by ?? "N/A"}
                           </span>
-                          <span className="text-xs text-gray-500">Focal Person</span>
+                          <span className="text-xs text-gray-500">
+                            {group.requested_by_office ?? "Focal Person"}
+                          </span>
                         </div>
                       </td>
                       <td colSpan="6" className="px-4 py-3">

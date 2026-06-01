@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('tbl_purchase_orders', function (Blueprint $table) {
             $table->id();
             $table->string('po_number', 15);
-            $table->foreignId('rfq_id')->constrained('tbl_rfqs')->restrictOnDelete();
+            // $table->foreignId('rfq_id')->constrained('tbl_rfqs')->restrictOnDelete();
             $table->foreignId('supplier_id')->constrained('tbl_suppliers')->restrictOnDelete();
             $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
             $table->foreignId('recorded_by')->constrained('users')->restrictOnDelete();

@@ -130,6 +130,9 @@ if ($poIds->count() === 1) {
         $purchaseOrder = [
             'id' => $po->id,
             'po_number' => $po->po_number,
+            'requested_by' => $po->requested_by,
+            'requested_by_id' => $po->requested_by_id,
+            'requested_by_office' => $po->requested_by_office,
             'detail' => $poDetail,
             'supplier' => $po->supplier,
         ];
@@ -183,6 +186,9 @@ if ($poIds->count() === 1) {
         $purchaseOrder = [
             'id' => $po->id,
             'po_number' => $po->po_number,
+            'requested_by' => $po->requested_by,
+            'requested_by_id' => $po->requested_by_id,
+            'requested_by_office' => $po->requested_by_office,
             'detail' => $poDetail,
             'supplier' => $po->supplier,
         ];

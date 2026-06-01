@@ -21,14 +21,17 @@ import { Button } from "@/components/ui/button";
 
 export default function ParForm({ purchaseOrder, inventoryItems = [], user, ppeOptions = [], parNumber }) {
   const pr = purchaseOrder?.detail?.pr_detail?.purchase_request ?? null;
-  const focal = pr
-    ? `${pr?.focal_person?.firstname ?? ""} ${pr?.focal_person?.middlename ?? ""} ${pr?.focal_person?.lastname ?? ""}`.trim()
-    : "N/A";
+  const focal = purchaseOrder?.requested_by
+    ? purchaseOrder.requested_by
+    : pr
+      ? `${pr?.focal_person?.firstname ?? ""} ${pr?.focal_person?.middlename ?? ""} ${pr?.focal_person?.lastname ?? ""}`.trim()
+      : "N/A";
+  const requestedByOffice = purchaseOrder?.requested_by_office ?? pr?.division?.division ?? "N/A";
 
   const { data, setData, post, processing, errors, reset } = useForm({
     po_id: purchaseOrder?.id ?? null,
     par_number: parNumber ?? "",
-    requested_by: pr?.focal_person?.id ?? null,
+    requested_by: purchaseOrder?.requested_by_id ?? null,
     issued_by: user?.id ?? null,
     remarks: "",
     date_acquired: new Date().toISOString().split("T")[0],
@@ -238,14 +241,7 @@ export default function ParForm({ purchaseOrder, inventoryItems = [], user, ppeO
             <h3 className="text-lg font-semibold text-gray-900">PAR Information</h3>
           </div>
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</label>
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
-                  <Building2 size={18} className="text-gray-400" />
-                  <span className="text-sm font-medium text-gray-900">{pr?.division?.division ?? "N/A"}</span>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">PAR Number</label>
                 <div className="relative">
@@ -257,7 +253,10 @@ export default function ParForm({ purchaseOrder, inventoryItems = [], user, ppeO
                 <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Requested By</label>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
                   <User size={18} className="text-gray-400" />
-                  <span className="text-sm font-medium text-gray-900">{focal}</span>
+                  <div>
+                    <span className="text-sm font-medium text-gray-900">{focal}</span>
+                    <p className="text-xs text-gray-500">{requestedByOffice}</p>
+                  </div>
                 </div>
               </div>
               <div className="space-y-2">

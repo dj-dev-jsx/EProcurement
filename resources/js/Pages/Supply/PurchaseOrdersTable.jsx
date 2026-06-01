@@ -33,7 +33,7 @@ export default function PurchaseOrdersTable({ purchaseOrders, filters }) {
 
   useEffect(() => {
     const delay = setTimeout(() => {
-      get(route("bac_user.purchase_orders_table"), {
+      get(route("supply_officer.purchase_orders_table"), {
         preserveState: true,
         replace: true,
       });
@@ -137,8 +137,8 @@ export default function PurchaseOrdersTable({ purchaseOrders, filters }) {
                         {/* Focal */}
                         <td className="px-6 py-4 text-gray-600">
                           {po.rfq?.purchase_request?.focal_person
-                            ? `${po.rfq.purchase_request.focal_person.firstname} ${po.rfq.purchase_request.focal_person.lastname}`
-                            : "N/A"}
+                            ? `${po.rfq?.purchase_request?.focal_person?.firstname ?? ""} ${po.rfq?.purchase_request?.focal_person?.lastname ?? ""}`
+                            : po.requested_by ? "Manual PO" : "N/A"}
                         </td>
 
                         {/* Supplier */}

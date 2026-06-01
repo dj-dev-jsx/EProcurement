@@ -71,7 +71,7 @@
             <td colspan="2" style="border-bottom:none !important;border-top:none !important">
                 Requisitioning Office/Dept :
                 <span class="underline font-semibold">
-                    {{ $iarData->purchaseOrder->rfq->purchaseRequest->division->meaning ?? 'CENTRAL WAREHOUSE' }}
+                    {{ $iarData->purchaseOrder->requested_by_office ?? $iarData->purchaseOrder->rfq->purchaseRequest->division->meaning ?? 'CENTRAL WAREHOUSE' }}
                 </span>
             </td>
             <td colspan="2" style="border-bottom:none !important;border-top:none !important">
@@ -96,12 +96,12 @@
 
         {{-- ✅ Show IAR details (if PO-based or central) --}}
         @if($iarData->purchaseOrder)
-            @foreach($iarData->purchaseOrder->details as $detail)
+            @foreach($iarItems as $item)
                 <tr class="text-center with-border">
                     <td></td>
-                    <td>{{ $detail->prDetail->item ?? '' }} - {{ $detail->prDetail->specs ?? '' }}</td>
-                    <td>{{ $iarData->unit->unit ?? '' }}</td>
-                    <td>{{ $detail->quantity ?? 0 }}</td>
+                    <td>{{ $item->specs }}</td>
+                    <td>{{ $item->unit->unit ?? '' }}</td>
+                    <td>{{ $item->quantity_received ?? 0 }}</td>
                 </tr>
             @endforeach
         @else

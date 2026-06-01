@@ -62,9 +62,12 @@ export default function RecordIar({
         );
 
       return {
+        po_detail_id: detail.id,
         pr_details_id: detail.pr_detail_id,
-        product_name: prDetail?.item || "Unknown Item",
-        specs: prDetail?.specs || "",
+        product_name:
+          detail.item || prDetail?.item || "Unknown Item",
+        specs: detail.specs || prDetail?.specs || "",
+        unit: detail.unit || prDetail?.unit || "",
         quantity_ordered: Number(detail.quantity || 0),
         unit_price: Number(detail.unit_price || 0),
         quantity_received: "",
@@ -250,7 +253,7 @@ export default function RecordIar({
 
                 return (
                   <Card
-                    key={item.pr_details_id}
+                    key={`${item.po_detail_id ?? index}`}
                     className="rounded-2xl shadow-sm border-0"
                   >
                     <CardContent className="p-5 space-y-4">
@@ -262,6 +265,7 @@ export default function RecordIar({
                           </h3>
                           <p className="text-sm text-slate-500">
                             {item.specs}
+                            {item.unit ? ` • ${item.unit}` : ""}
                           </p>
                         </div>
 

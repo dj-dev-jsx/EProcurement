@@ -1,7 +1,7 @@
-import ApproverLayout from "@/Layouts/ApproverLayout";
+import SupplyOfficerLayout from "@/Layouts/SupplyOfficerLayout";
 import { Head, useForm } from "@inertiajs/react";
 import React, { useEffect } from "react";
-import { FunnelIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import { FunnelIcon, DocumentTextIcon, PlusIcon } from "@heroicons/react/24/outline";
 
 export default function PurchaseOrder({ purchaseRequests, filters }) {
   const { data, setData, get } = useForm({
@@ -11,7 +11,7 @@ export default function PurchaseOrder({ purchaseRequests, filters }) {
 
   useEffect(() => {
     const delay = setTimeout(() => {
-      get(route("bac_user.purchase_orders"), {
+      get(route("supply_officer.purchase_orders"), {
         preserveState: true,
         replace: true,
       });
@@ -21,20 +21,32 @@ export default function PurchaseOrder({ purchaseRequests, filters }) {
   }, [data.search, data.division]);
 
   return (
-    <ApproverLayout header="Create Purchase Orders">
+    <SupplyOfficerLayout header="Create Purchase Orders">
       <Head title="Purchase Orders" />
 
       <div className="p-4 sm:p-6 lg:p-8 space-y-6 bg-gray-50 min-h-screen">
 
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">
-            Create Purchase Orders
-          </h1>
-          <p className="text-sm text-gray-500">
-            Generate purchase orders from winning suppliers
-          </p>
-        </div>
+{/* Header */}
+<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div>
+    <h1 className="text-2xl font-bold text-gray-800">
+      Create Purchase Orders
+    </h1>
+    <p className="text-sm text-gray-500">
+      Generate purchase orders from winning suppliers
+    </p>
+  </div>
+
+  <button
+    onClick={() =>
+      (window.location.href = route("supply_officer.create_po"))
+    }
+    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition-all"
+  >
+    <PlusIcon className="w-5 h-5" />
+    Add PO
+  </button>
+</div>
 
         {/* Filters */}
         <div className="bg-white rounded-2xl border shadow-sm p-4">
@@ -146,8 +158,8 @@ export default function PurchaseOrder({ purchaseRequests, filters }) {
 
                           {/* Focal */}
                           <td className="px-6 py-4 text-gray-600">
-                            {pr.focal_person.firstname}{" "}
-                            {pr.focal_person.lastname}
+                            {pr.focal_person?.firstname ?? ""}{" "}
+                            {pr.focal_person?.lastname ?? ""}
                           </td>
 
                           {/* Division */}
@@ -187,7 +199,7 @@ export default function PurchaseOrder({ purchaseRequests, filters }) {
                               <button
                                 onClick={() =>
                                   window.location.href = route(
-                                    "bac_user.create_po",
+                                    "supply_officer.create_po",
                                     pr.id
                                   )
                                 }
@@ -237,6 +249,6 @@ export default function PurchaseOrder({ purchaseRequests, filters }) {
           )}
         </div>
       </div>
-    </ApproverLayout>
+    </SupplyOfficerLayout>
   );
 }
