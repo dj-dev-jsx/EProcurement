@@ -240,83 +240,44 @@ public function purchase_orders(Request $request)
     $search   = $request->input('search');
     $division = $request->input('division');
 
-    $purchaseRequests = PurchaseRequest::with([
-        'division',
-        'focal_person',
-        'details.product.unit',
-        'rfqs.details.supplier',
-        'rfqs.details.prDetail' // make sure we eager-load PR details for quantity
-    ])
-    ->latest('created_at')
-    ->whereHas('rfqs.details', fn ($q) => $q->where('is_winner_as_calculated', true))
-    ->when($search, function ($query, $search) {
+    $query = PurchaseOrder::with([
+        'supplier',
+        'details',
+        'rfq.purchaseRequest.division',
+        'rfq.purchaseRequest.focal_person',
+        'iar'
+    ]);
+
+    if ($search) {
         $query->where(function ($q) use ($search) {
-            $q->where('pr_number', 'like', "%$search%")
-              ->orWhereHas('focal_person', fn ($q2) =>
-                  $q2->where('firstname', 'like', "%$search%")
-                     ->orWhere('lastname', 'like', "%$search%")
-              );
+            $q->where('po_number', 'like', "%{$search}%")
+              ->orWhere('requested_by', 'like', "%{$search}%")
+              ->orWhereHas('rfq.purchaseRequest.focal_person', function ($q2) use ($search) {
+                  $q2->where('firstname', 'like', "%{$search}%")
+                      ->orWhere('lastname', 'like', "%{$search}%");
+              });
         });
-    })
-    ->when($division, fn ($q) => $q->where('division_id', $division))
-    ->paginate(10)
-    ->withQueryString();
+    }
 
-    // Get all RFQ IDs that already have POs
-    $poRfqs = PurchaseOrder::pluck('rfq_id')->toArray();
-
-    $purchaseRequests->getCollection()->transform(function ($pr) use ($poRfqs) {
-        $rfqIds   = $pr->rfqs->pluck('id')->toArray();
-        $pr->has_po = count(array_intersect($rfqIds, $poRfqs)) > 0;
-
-        // Winners info (same logic as create_po)
-        $pr->winners = $pr->rfqs
-            ->flatMap(fn($rfq) => $rfq->details)
-            ->filter(fn($d) => $d->is_winner_as_calculated)
-            ->map(fn($w) => [
-                'pr_detail_id'  => $w->pr_details_id,
-                'supplier_id'   => $w->supplier_id,
-                'supplier_name' => $w->supplier->company_name ?? 'N/A',
-                'quantity'      => $w->pr_detail->quantity ?? 0,
-                'unit_price'    => $w->unit_price_edited ?? $w->quoted_price ?? 0,
-                'total_price'   => ($w->unit_price_edited ?? $w->quoted_price ?? 0) * ($w->pr_detail->quantity ?? 0),
-                'price_source'  => $w->unit_price_edited ? 'As Calculated Price' : 'Quoted Price',
-                'item'          => $w->pr_detail->item ?? '',
-                'specs'         => $w->pr_detail->specs ?? '',
-                'unit'          => $w->pr_detail->unit ?? '',
-            ])
-            ->values();
-
-        // Supplier totals (mirrors create_po)
-        $pr->rfq_totals = $pr->rfqs
-            ->map(function ($rfq) {
-                $supplierTotals = $rfq->details
-                    ->groupBy('supplier_id')
-                    ->map(function ($details) {
-                        return $details->sum(function ($d) {
-                            $unitPrice = $d->unit_price_edited ?? $d->quoted_price ?? 0;
-                            $qty       = $d->pr_detail?->quantity ?? 0;
-                            return $unitPrice * $qty;
-                        });
-                    });
-
-                return [
-                    'rfq_id'   => $rfq->id,
-                    'suppliers'=> $supplierTotals
-                ];
+    if ($division) {
+        $query->where(function ($q) use ($division) {
+            $q->where(function ($q2) use ($division) {
+                $q2->whereHas('rfq.purchaseRequest.division', function ($q3) use ($division) {
+                    $q3->where('id', $division);
+                })
+                ->orWhere('requested_by_office', 'like', "%{$division}%");
             });
+        });
+    }
 
-        return $pr;
-    });
-
-    $divisions = Division::select('id', 'division')->get();
+    $purchaseOrders = $query->orderByDesc('created_at')->paginate(10)->withQueryString();
 
     return Inertia::render('Supply/PurchaseOrder', [
-        'purchaseRequests' => $purchaseRequests,
+        'purchaseRequests' => $purchaseOrders,
         'filters' => [
             'search'   => $search,
             'division' => $division,
-            'divisions'=> $divisions,
+            'divisions'=> Division::select('id', 'division')->get(),
         ],
     ]);
 }
@@ -502,6 +463,7 @@ public function store_po(Request $request)
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('po_number', 'like', "%{$search}%")
+                ->orWhere('requested_by', 'like', "%{$search}%")
                 ->orWhereHas('rfq.purchaseRequest.focal_person', function ($q2) use ($search) {
                     $q2->where('firstname', 'like', "%{$search}%")
                         ->orWhere('lastname', 'like', "%{$search}%");
@@ -510,8 +472,11 @@ public function store_po(Request $request)
         }
 
         if ($division) {
-            $query->whereHas('rfq.purchaseRequest.division', function ($q) use ($division) {
-                $q->where('id', $division);
+            $query->where(function ($q) use ($division) {
+                $q->whereHas('rfq.purchaseRequest.division', function ($q2) use ($division) {
+                    $q2->where('id', $division);
+                })
+                ->orWhere('requested_by_office', 'like', "%{$division}%");
             });
         }
 
@@ -551,10 +516,12 @@ public function store_po(Request $request)
 
         if ($division) {
             $query->where(function ($q) use ($division) {
-                $q->whereHas('rfq.purchaseRequest.division', function ($q2) use ($division) {
-                    $q2->where('id', $division);
-                })
-                  ->orWhere('requested_by_office', 'like', "%{$division}%");
+                $q->where(function ($q2) use ($division) {
+                    $q2->whereHas('rfq.purchaseRequest.division', function ($q3) use ($division) {
+                        $q3->where('id', $division);
+                    })
+                    ->orWhere('requested_by_office', 'like', "%{$division}%");
+                });
             });
         }
 

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
-export default function ICSForm({ purchaseOrder, inventoryItems = [], user, ppeOptions = [], icsNumber }) {
+  export default function ICSForm({ purchaseOrder, inventoryItems = [], user, ppeOptions = [], icsNumber }) {
   const pr = purchaseOrder?.detail?.pr_detail?.purchase_request ?? null;
   const focal = purchaseOrder?.requested_by
     ? purchaseOrder.requested_by

@@ -86,7 +86,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($ics->items as $issued)
+            @foreach($items as $issued)
                 @php
                     $inventory = $issued->inventoryItem;
 

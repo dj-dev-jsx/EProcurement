@@ -131,10 +131,9 @@
     <!-- ITEMS -->
     @foreach($po->details as $item)
         @php
-            $prDetail = $po->rfq?->purchaseRequest?->details->firstWhere('id', $item->pr_detail_id);
-            $itemName = $prDetail?->item ?? '-';
-            $specs = $prDetail?->specs ?? '-';
-            $unit = $prDetail?->unit ?? $item->unit ?? '-';
+            $itemName = $item->item ?? '-';
+            $specs = $item->specs ?? '-';
+            $unit = $item->unit ?? '-';
             $total += $item->total_price;
         @endphp
 

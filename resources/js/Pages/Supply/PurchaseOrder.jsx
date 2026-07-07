@@ -21,7 +21,7 @@ export default function PurchaseOrder({ purchaseRequests, filters }) {
   }, [data.search, data.division]);
 
   return (
-    <SupplyOfficerLayout header="Create Purchase Orders">
+    <SupplyOfficerLayout header="Purchase Orders">
       <Head title="Purchase Orders" />
 
       <div className="p-4 sm:p-6 lg:p-8 space-y-6 bg-gray-50 min-h-screen">
@@ -30,10 +30,10 @@ export default function PurchaseOrder({ purchaseRequests, filters }) {
 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
   <div>
     <h1 className="text-2xl font-bold text-gray-800">
-      Create Purchase Orders
+      Purchase Orders
     </h1>
     <p className="text-sm text-gray-500">
-      Generate purchase orders from winning suppliers
+      Manage and view all created purchase orders
     </p>
   </div>
 
@@ -44,7 +44,7 @@ export default function PurchaseOrder({ purchaseRequests, filters }) {
     className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition-all"
   >
     <PlusIcon className="w-5 h-5" />
-    Add PO
+    Create PO
   </button>
 </div>
 
@@ -58,7 +58,7 @@ export default function PurchaseOrder({ purchaseRequests, filters }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               type="text"
-              placeholder="Search PR number or focal person"
+              placeholder="Search PO number or focal person"
               value={data.search}
               onChange={(e) => setData("search", e.target.value)}
               className="rounded-lg border-gray-300 px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
@@ -86,10 +86,10 @@ export default function PurchaseOrder({ purchaseRequests, filters }) {
             <div className="py-16 flex flex-col items-center text-center">
               <DocumentTextIcon className="w-12 h-12 text-gray-300 mb-3" />
               <p className="text-gray-500 text-lg">
-                No Purchase Requests with winners
+                No Purchase Orders found
               </p>
               <span className="text-sm text-gray-400">
-                Only requests with selected suppliers appear here
+                Try adjusting filters or search terms
               </span>
             </div>
           ) : (
@@ -98,116 +98,93 @@ export default function PurchaseOrder({ purchaseRequests, filters }) {
                 <table className="min-w-full text-sm">
                   <thead className="bg-gray-100 sticky top-0 z-10">
                     <tr className="text-gray-600 text-xs uppercase">
-                      <th className="px-6 py-3 text-left">PR #</th>
-                      <th className="px-6 py-3 text-left">Focal</th>
+                      <th className="px-6 py-3 text-left">PO #</th>
+                      <th className="px-6 py-3 text-left">Focal Person</th>
+                      <th className="px-6 py-3 text-left">Supplier</th>
+                      <th className="px-6 py-3 text-left">Description</th>
                       <th className="px-6 py-3 text-left">Division</th>
-                      <th className="px-6 py-3 text-left">Summary</th>
-                      <th className="px-6 py-3 text-left">Supplier / Amount</th>
+                      <th className="px-6 py-3 text-left">Status</th>
                       <th className="px-6 py-3 text-center">Action</th>
                     </tr>
                   </thead>
 
                   <tbody className="divide-y">
-                    {purchaseRequests.data.map((pr) => {
-                      const winningDetails = pr.details.filter((detail) =>
-                        pr.rfqs
-                          ?.flatMap((r) => r.details)
-                          .some(
-                            (d) =>
-                              d.pr_details_id === detail.id &&
-                              d.is_winner_as_calculated
-                          )
-                      );
-
-                      if (winningDetails.length === 0) return null;
-
-                      const winners = pr.rfqs
-                        ?.flatMap((r) => r.details ?? [])
-                        .filter(
-                          (d) =>
-                            winningDetails.some(
-                              (wd) => wd.id === d.pr_details_id
-                            ) && d.is_winner_as_calculated
-                        );
-
-                      const totalQuotedPrice = winners.reduce((sum, w) => {
-                        const prDetail = winningDetails.find(
-                          (d) => d.id === w.pr_details_id
-                        );
-                        const qty = prDetail?.quantity ?? 1;
-                        const price =
-                          w.unit_price_edited ?? w.quoted_price ?? 0;
-                        return sum + price * qty;
-                      }, 0);
-
-                      const supplierList = [
-                        ...new Set(
-                          winners.map(
-                            (w) => w.supplier?.company_name || "N/A"
-                          )
-                        ),
-                      ];
+                    {purchaseRequests.data.map((po) => {
+                      const focal = po.rfq?.purchase_request?.focal_person;
+                      const division = po.rfq?.purchase_request?.division?.division || po.requested_by_office;
 
                       return (
-                        <tr key={pr.id} className="hover:bg-gray-50 transition">
+                        <tr key={po.id} className="hover:bg-gray-50 transition">
 
-                          {/* PR */}
+                          {/* PO # */}
                           <td className="px-6 py-4 font-semibold text-indigo-600">
-                            {pr.pr_number}
+                            {po.po_number}
                           </td>
 
-                          {/* Focal */}
+                          {/* Focal Person */}
                           <td className="px-6 py-4 text-gray-600">
-                            {pr.focal_person?.firstname ?? ""}{" "}
-                            {pr.focal_person?.lastname ?? ""}
+                            {focal
+                              ? `${focal.firstname || ""} ${focal.lastname || ""}`
+                              : "N/A"}
+                          </td>
+
+                          {/* Supplier */}
+                          <td className="px-6 py-4 text-gray-600">
+                            {po.supplier?.company_name || "N/A"}
+                          </td>
+
+                          {/* Description */}
+                          <td className="px-6 py-4 text-gray-600">
+                            <div className="text-sm">
+                              {po.details?.map((detail, idx) => (
+                                <div key={idx} className="mb-1">
+                                  <div className="font-medium">{detail.item}</div>
+                                  <div className="text-xs text-gray-500">{detail.specs}</div>
+                                </div>
+                              )).slice(0, 1) || "N/A"}
+                            </div>
+                            {po.details?.length > 1 && (
+                              <div className="text-xs text-gray-400 mt-1">
+                                +{po.details.length - 1} more
+                              </div>
+                            )}
                           </td>
 
                           {/* Division */}
                           <td className="px-6 py-4">
                             <span className="px-2 py-1 text-xs bg-indigo-50 text-indigo-600 rounded-full">
-                              {pr.division.division}
+                              {division || "N/A"}
                             </span>
                           </td>
 
-                          {/* Summary */}
-                          <td className="px-6 py-4 text-gray-600">
-                            {winningDetails[0]?.item}
-                            {winningDetails.length > 1 && (
-                              <span className="text-xs text-gray-400 ml-1">
-                                +{winningDetails.length - 1}
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Supplier + Price */}
-                          <td className="px-6 py-4">
-                            <div className="text-gray-700">
-                              {supplierList.join(", ")}
-                            </div>
-                            <div className="text-sm font-semibold text-indigo-600">
-                              ₱{totalQuotedPrice.toLocaleString()}
-                            </div>
+                          {/* Status */}
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-3 py-1 text-xs rounded-full font-medium ${
+                              po.status === 'completed'
+                                ? 'bg-green-100 text-green-700'
+                                : po.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : po.status === 'cancelled'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {po.status || "pending"}
+                            </span>
                           </td>
 
                           {/* Action */}
                           <td className="px-6 py-4 text-center">
-                            {pr.has_po ? (
-                              <span className="px-3 py-1 text-xs bg-gray-200 text-gray-600 rounded-full">
-                                PO Generated
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() =>
-                                  window.location.href = route(
-                                    "supply_officer.create_po",
-                                    pr.id
-                                  )
-                                }
-                                className="px-3 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition"
-                              >
-                                Create PO
-                              </button>
-                            )}
+                            <button
+                              onClick={() =>
+                                window.open(
+                                  route("supply_officer.print_po", po.id),
+                                  "_blank"
+                                )
+                              }
+                              className="px-3 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition"
+                            >
+                              Print
+                            </button>
                           </td>
                         </tr>
                       );

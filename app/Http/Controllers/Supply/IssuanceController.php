@@ -244,12 +244,23 @@ public function store_ris(Request $request)
         $validated['po_id'] = $poIds->count() === 1 ? $poIds->first() : null;
     }
 
+    // Get requested_by from PO if available
+    $requestedByFromPO = null;
+    $requestedByOfficeFromPO = null;
+    if ($validated['po_id']) {
+        $po = PurchaseOrder::find($validated['po_id']);
+        if ($po) {
+            $requestedByFromPO = $po->requested_by_id;
+            $requestedByOfficeFromPO = $po->requested_by_office;
+        }
+    }
+
     if (!$ris) {
         // 🆕 Create a new RIS if not found
         $ris = RIS::create([
             'po_id' => $validated['po_id'] ?? null,
             'ris_number' => $validated['ris_number'],
-            'requested_by' => $validated['requested_by'] ?? null,
+            'requested_by' => $requestedByFromPO ?? $validated['requested_by'] ?? null,
             'issued_by' => $validated['issued_by'],
             'remarks' => $validated['remarks'] ?? null,
         ]);
@@ -260,10 +271,10 @@ public function store_ris(Request $request)
 
         // Fill recipient & division if null
         $recipient = $item['recipient'] ?? null;
-        $recipientDivision = $item['recipient_division'] ?? null;
+        $recipientDivision = $item['recipient_division'] ?? $requestedByOfficeFromPO ?? null;
 
-        if (!$recipient && $validated['requested_by']) {
-            $requestedByUser = User::find($validated['requested_by']);
+        if (!$recipient && $requestedByFromPO) {
+            $requestedByUser = User::find($requestedByFromPO);
             if ($requestedByUser) {
                 $recipient = trim(
                     ($requestedByUser->firstname ?? '') . ' ' .
@@ -271,7 +282,10 @@ public function store_ris(Request $request)
                     ($requestedByUser->lastname ?? '')
                 );
 
-                $recipientDivision = $requestedByUser->division->division ?? null;
+                // Use requested_by_office from PO if available, otherwise use user's division
+                if (!$recipientDivision) {
+                    $recipientDivision = $requestedByUser->division->division ?? null;
+                }
             }
         }
 
@@ -507,11 +521,12 @@ public function print_ics($id, $types = null)
     ])->findOrFail($id);
 
     // Filter items if types are provided
+    $items = $ics->items;
     if ($types) {
-        $ics->items = $ics->items->whereIn('type', (array) $types)->values();
+        $items = collect($ics->items)->whereIn('type', (array) $types)->values();
     }
 
-    $pdf = Pdf::loadView('pdf.print_ics', ['ics' => $ics])
+    $pdf = Pdf::loadView('pdf.print_ics', ['ics' => $ics, 'items' => $items])
         ->setPaper('A4', 'portrait');
 
     $typeSuffix = $types ? '-'.implode('-', (array)$types) : '';
@@ -530,11 +545,10 @@ public function print_ics_all($id)
         'items.inventoryItem.poDetail.prDetail.product',
     ])->findOrFail($id);
 
-    // Include all items regardless of type
-    // Optional: you could still sort by type if needed
-    $ics->items = $ics->items->sortBy('type')->values();
+    // Sort items by type
+    $items = collect($ics->items)->sortBy('type')->values();
 
-    $pdf = Pdf::loadView('pdf.print_ics', ['ics' => $ics])
+    $pdf = Pdf::loadView('pdf.print_ics', ['ics' => $ics, 'items' => $items])
         ->setPaper('A4', 'portrait');
 
     return $pdf->stream('ICS-'.$ics->ics_number.'-all.pdf');
